@@ -36,3 +36,17 @@
     color: #cc0000;
     font-weight: 700;
 }
+
+.aiw-preview-content {
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: #fff;
+    padding: 16px;
+    max-height: 420px;
+    overflow: auto;
+}
+
+.aiw-list {
+    margin: 0 0 12px 18px;
+    list-style: disc;
+}

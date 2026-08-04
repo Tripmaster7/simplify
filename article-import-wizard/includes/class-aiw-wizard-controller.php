@@ -22,8 +22,7 @@ class AIW_Wizard_Controller
         AIW_Content_Builder $content_builder,
         AIW_Notifier $notifier,
         AIW_Shortcode_Service $shortcode_service
-    )
-    {
+    ) {
         $this->author_service = $author_service;
         $this->docx_parser = $docx_parser;
         $this->image_mapper = $image_mapper;
@@ -35,6 +34,7 @@ class AIW_Wizard_Controller
 
     public function register(): void
     {
+        add_action('admin_post_aiw_preview_import', [$this, 'handle_preview_import']);
         add_action('admin_post_aiw_create_draft', [$this, 'handle_create_draft']);
     }
 
@@ -46,6 +46,9 @@ class AIW_Wizard_Controller
 
         $message = isset($_GET['aiw_message']) ? sanitize_text_field(wp_unslash($_GET['aiw_message'])) : '';
         $error = isset($_GET['aiw_error']) ? sanitize_text_field(wp_unslash($_GET['aiw_error'])) : '';
+        $preview_token = isset($_GET['aiw_preview_token']) ? sanitize_text_field(wp_unslash($_GET['aiw_preview_token'])) : '';
+        $preview_data = $preview_token !== '' ? $this->get_preview_data($preview_token) : null;
+
         $default_restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
         $default_restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
         $default_inline_slots = AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
@@ -54,13 +57,13 @@ class AIW_Wizard_Controller
         include AIW_PLUGIN_DIR . 'templates/wizard-step-upload.php';
     }
 
-    public function handle_create_draft(): void
+    public function handle_preview_import(): void
     {
         if (!$this->can_access_wizard()) {
             wp_die(esc_html__('Unauthorized.', 'article-import-wizard'));
         }
 
-        check_admin_referer('aiw_create_draft_nonce');
+        check_admin_referer('aiw_preview_import_nonce');
 
         $membership_number = isset($_POST['aiw_membership_number'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_membership_number']))
@@ -90,7 +93,7 @@ class AIW_Wizard_Controller
             ? sanitize_text_field(wp_unslash($_POST['aiw_broken_link_mode']))
             : AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
 
-        $author_bio = isset($_POST['aiw_author_bio'])
+        $submitted_author_bio = isset($_POST['aiw_author_bio'])
             ? sanitize_textarea_field(wp_unslash($_POST['aiw_author_bio']))
             : '';
 
@@ -114,7 +117,6 @@ class AIW_Wizard_Controller
 
         if ($post_content === '' && !empty($doc_parse['content'])) {
             $post_content = wp_kses_post((string) $doc_parse['content']);
-
             if (!empty($doc_parse['subtitle'])) {
                 $post_content = '<h2>' . esc_html((string) $doc_parse['subtitle']) . '</h2>' . "\n" . $post_content;
             }
@@ -132,21 +134,26 @@ class AIW_Wizard_Controller
             $restriction_end
         );
 
+        $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
         $inline_image_ids = $this->upload_multiple_images('aiw_inline_images', $inline_image_count, 0);
+        $author_image_id = $this->upload_single_image('aiw_author_image', 0);
+
         $image_map = $this->build_inline_image_map($inline_image_ids);
         $missing_image_slots = [];
         $working_content = $this->image_mapper->replace_placeholders($working_content, $image_map, $missing_image_slots);
 
-        if ($author_bio !== '') {
-            update_user_meta($attributed_author->ID, 'aiw_author_bio', $author_bio);
-        }
+        $stored_author_bio = (string) get_user_meta((int) $attributed_author->ID, 'aiw_author_bio', true);
+        $final_author_bio = $submitted_author_bio !== '' ? $submitted_author_bio : $stored_author_bio;
 
-        $author_image_id = $this->upload_single_image('aiw_author_image', 0);
-        if ($author_image_id > 0) {
-            update_user_meta($attributed_author->ID, 'aiw_author_image_id', $author_image_id);
-        }
+        $stored_author_image_id = (int) get_user_meta((int) $attributed_author->ID, 'aiw_author_image_id', true);
+        $final_author_image_id = $author_image_id > 0 ? $author_image_id : $stored_author_image_id;
 
-        $working_content = $this->content_builder->append_bio_box($working_content, (int) $attributed_author->ID);
+        $working_content = $this->append_bio_box_from_data(
+            $working_content,
+            (string) $attributed_author->display_name,
+            $final_author_bio,
+            $final_author_image_id
+        );
 
         $links = $this->extract_links_from_content($working_content);
         if (isset($doc_parse['links']) && is_array($doc_parse['links'])) {
@@ -167,41 +174,9 @@ class AIW_Wizard_Controller
             $working_content = $this->replace_invalid_links_in_content($working_content, $invalid_urls);
         }
 
-        $post_id = wp_insert_post([
-            'post_type' => 'post',
-            'post_status' => 'draft',
-            'post_title' => $post_title,
-            'post_content' => $working_content,
-            // Keep operator as actual post owner for permission safety.
-            'post_author' => $operator_user_id,
-        ], true);
-
-        if (is_wp_error($post_id)) {
-            $this->redirect_with_error($post_id->get_error_message());
-        }
-
-        foreach ($inline_image_ids as $inline_image_id) {
-            wp_update_post([
-                'ID' => (int) $inline_image_id,
-                'post_parent' => (int) $post_id,
-            ]);
-        }
-
-        if ($author_image_id > 0) {
-            wp_update_post([
-                'ID' => (int) $author_image_id,
-                'post_parent' => (int) $post_id,
-            ]);
-        }
-
         $source_filename = isset($_FILES['aiw_docx_file']['name'])
             ? sanitize_file_name(wp_unslash($_FILES['aiw_docx_file']['name']))
             : '';
-
-        $headline_image_id = $this->upload_single_image('aiw_headline_image', $post_id);
-        if ($headline_image_id > 0) {
-            set_post_thumbnail($post_id, $headline_image_id);
-        }
 
         $validation_report = [
             'invalid_links' => $link_validation['invalid'],
@@ -211,30 +186,136 @@ class AIW_Wizard_Controller
             'doc_author' => isset($doc_parse['doc_author']) ? (string) $doc_parse['doc_author'] : '',
         ];
 
+        $preview_payload = [
+            'membership_number' => $membership_number,
+            'attributed_author_user_id' => (int) $attributed_author->ID,
+            'attributed_author_name' => (string) $attributed_author->display_name,
+            'operator_user_id' => (int) $operator_user_id,
+            'post_title' => $post_title,
+            'working_content' => $working_content,
+            'restriction_start' => $restriction_start,
+            'restriction_end' => $restriction_end,
+            'source_filename' => $source_filename,
+            'broken_link_mode' => $broken_link_mode,
+            'headline_image_id' => (int) $headline_image_id,
+            'inline_image_ids' => array_map('intval', $inline_image_ids),
+            'author_image_id' => (int) $author_image_id,
+            'final_author_image_id' => (int) $final_author_image_id,
+            'submitted_author_bio' => $submitted_author_bio,
+            'final_author_bio' => $final_author_bio,
+            'validation_report' => $validation_report,
+            'invalid_links_count' => count($link_validation['invalid']),
+            'created_at' => gmdate('c'),
+        ];
+
+        $token = wp_generate_password(20, false, false);
+        $this->store_preview_data($token, $preview_payload);
+
+        $this->redirect_to_preview($token, __('Preview generated. Review and confirm draft creation.', 'article-import-wizard'));
+    }
+
+    public function handle_create_draft(): void
+    {
+        if (!$this->can_access_wizard()) {
+            wp_die(esc_html__('Unauthorized.', 'article-import-wizard'));
+        }
+
+        check_admin_referer('aiw_create_draft_nonce');
+
+        $preview_token = isset($_POST['aiw_preview_token'])
+            ? sanitize_text_field(wp_unslash($_POST['aiw_preview_token']))
+            : '';
+
+        if ($preview_token === '') {
+            $this->redirect_with_error(__('Preview token missing. Please run preview first.', 'article-import-wizard'));
+        }
+
+        $preview = $this->get_preview_data($preview_token);
+        if (!is_array($preview)) {
+            $this->redirect_with_error(__('Preview data expired. Please run preview again.', 'article-import-wizard'));
+        }
+
+        $operator_user_id = get_current_user_id();
+
+        $post_id = wp_insert_post([
+            'post_type' => 'post',
+            'post_status' => 'draft',
+            'post_title' => (string) $preview['post_title'],
+            'post_content' => (string) $preview['working_content'],
+            'post_author' => $operator_user_id,
+        ], true);
+
+        if (is_wp_error($post_id)) {
+            $this->redirect_with_error($post_id->get_error_message());
+        }
+
+        $headline_image_id = isset($preview['headline_image_id']) ? (int) $preview['headline_image_id'] : 0;
+        if ($headline_image_id > 0) {
+            wp_update_post([
+                'ID' => $headline_image_id,
+                'post_parent' => (int) $post_id,
+            ]);
+            set_post_thumbnail($post_id, $headline_image_id);
+        }
+
+        $inline_image_ids = isset($preview['inline_image_ids']) && is_array($preview['inline_image_ids'])
+            ? $preview['inline_image_ids']
+            : [];
+        foreach ($inline_image_ids as $inline_image_id) {
+            wp_update_post([
+                'ID' => (int) $inline_image_id,
+                'post_parent' => (int) $post_id,
+            ]);
+        }
+
+        $attributed_author_user_id = isset($preview['attributed_author_user_id']) ? (int) $preview['attributed_author_user_id'] : 0;
+        if ($attributed_author_user_id <= 0) {
+            $this->redirect_with_error(__('Attributed author is missing in preview payload.', 'article-import-wizard'));
+        }
+
+        $submitted_author_bio = isset($preview['submitted_author_bio']) ? (string) $preview['submitted_author_bio'] : '';
+        if ($submitted_author_bio !== '') {
+            update_user_meta($attributed_author_user_id, 'aiw_author_bio', $submitted_author_bio);
+        }
+
+        $author_image_id = isset($preview['author_image_id']) ? (int) $preview['author_image_id'] : 0;
+        if ($author_image_id > 0) {
+            wp_update_post([
+                'ID' => $author_image_id,
+                'post_parent' => (int) $post_id,
+            ]);
+            update_user_meta($attributed_author_user_id, 'aiw_author_image_id', $author_image_id);
+        }
+
+        $validation_report = isset($preview['validation_report']) && is_array($preview['validation_report'])
+            ? $preview['validation_report']
+            : [];
+
         update_post_meta($post_id, '_aiw_imported', 1);
         update_post_meta($post_id, '_aiw_import_status', 'completed');
-        update_post_meta($post_id, '_aiw_attributed_author_user_id', (int) $attributed_author->ID);
+        update_post_meta($post_id, '_aiw_attributed_author_user_id', $attributed_author_user_id);
         update_post_meta($post_id, '_aiw_imported_by_user_id', (int) $operator_user_id);
         update_post_meta($post_id, '_aiw_imported_at', gmdate('c'));
-        update_post_meta($post_id, '_aiw_doc_source_filename', $source_filename);
+        update_post_meta($post_id, '_aiw_doc_source_filename', isset($preview['source_filename']) ? (string) $preview['source_filename'] : '');
         update_post_meta($post_id, '_aiw_validation_report', wp_json_encode($validation_report));
-        update_post_meta($post_id, '_aiw_restriction_shortcode_start', $restriction_start);
-        update_post_meta($post_id, '_aiw_restriction_shortcode_end', $restriction_end);
+        update_post_meta($post_id, '_aiw_restriction_shortcode_start', isset($preview['restriction_start']) ? (string) $preview['restriction_start'] : '');
+        update_post_meta($post_id, '_aiw_restriction_shortcode_end', isset($preview['restriction_end']) ? (string) $preview['restriction_end'] : '');
 
         $notify_email = AIW_Settings::get_option_string(AIW_Settings::OPTION_NOTIFY_EMAIL, get_option('admin_email', ''));
         $this->notifier->send_import_complete_email($post_id, $notify_email, [
-            'membership_number' => $membership_number,
-            'attributed_author' => $attributed_author->display_name,
-            'invalid_links' => count($link_validation['invalid']),
-            'operator_user_id' => $operator_user_id,
+            'membership_number' => isset($preview['membership_number']) ? (string) $preview['membership_number'] : '',
+            'attributed_author' => isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : '',
+            'invalid_links' => isset($preview['invalid_links_count']) ? (int) $preview['invalid_links_count'] : 0,
+            'operator_user_id' => (int) $operator_user_id,
         ]);
+
+        $this->delete_preview_data($preview_token);
 
         $edit_url = get_edit_post_link($post_id, '');
         $message = sprintf(
-            /* translators: %1$s: post id, %2$s: attributed author login */
             __('Draft #%1$s created. Attributed author: %2$s', 'article-import-wizard'),
             $post_id,
-            $attributed_author->user_login
+            isset($preview['membership_number']) ? (string) $preview['membership_number'] : ''
         );
 
         $this->redirect_with_message($message, $edit_url);
@@ -248,74 +329,72 @@ class AIW_Wizard_Controller
     private function parse_uploaded_docx(): array
     {
         if (!isset($_FILES['aiw_docx_file']['name']) || !is_string($_FILES['aiw_docx_file']['name'])) {
-            return [
-                'title' => '',
-                'subtitle' => '',
-                'content' => '',
-                'writing_date' => '',
-                'doc_author' => '',
-                'links' => [],
-                'placeholders' => [],
-                'error' => '',
-            ];
+            return $this->empty_doc_parse_payload('');
         }
 
         $filename = sanitize_file_name(wp_unslash($_FILES['aiw_docx_file']['name']));
         if ($filename === '') {
-            return [
-                'title' => '',
-                'subtitle' => '',
-                'content' => '',
-                'writing_date' => '',
-                'doc_author' => '',
-                'links' => [],
-                'placeholders' => [],
-                'error' => '',
-            ];
+            return $this->empty_doc_parse_payload('');
         }
 
         $extension = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION));
         if ($extension !== 'docx') {
-            return [
-                'title' => '',
-                'subtitle' => '',
-                'content' => '',
-                'writing_date' => '',
-                'doc_author' => '',
-                'links' => [],
-                'placeholders' => [],
-                'error' => __('Only DOCX files are allowed.', 'article-import-wizard'),
-            ];
+            return $this->empty_doc_parse_payload(__('Only DOCX files are allowed.', 'article-import-wizard'));
         }
 
         if (!isset($_FILES['aiw_docx_file']['tmp_name']) || !is_string($_FILES['aiw_docx_file']['tmp_name'])) {
-            return [
-                'title' => '',
-                'subtitle' => '',
-                'content' => '',
-                'writing_date' => '',
-                'doc_author' => '',
-                'links' => [],
-                'placeholders' => [],
-                'error' => __('Uploaded DOCX temp file is missing.', 'article-import-wizard'),
-            ];
+            return $this->empty_doc_parse_payload(__('Uploaded DOCX temp file is missing.', 'article-import-wizard'));
         }
 
         $tmp_name = $_FILES['aiw_docx_file']['tmp_name'];
         if ($tmp_name === '' || !file_exists($tmp_name)) {
-            return [
-                'title' => '',
-                'subtitle' => '',
-                'content' => '',
-                'writing_date' => '',
-                'doc_author' => '',
-                'links' => [],
-                'placeholders' => [],
-                'error' => __('Uploaded DOCX temp file is not accessible.', 'article-import-wizard'),
-            ];
+            return $this->empty_doc_parse_payload(__('Uploaded DOCX temp file is not accessible.', 'article-import-wizard'));
         }
 
         return $this->docx_parser->parse($tmp_name);
+    }
+
+    private function empty_doc_parse_payload(string $error): array
+    {
+        return [
+            'title' => '',
+            'subtitle' => '',
+            'content' => '',
+            'writing_date' => '',
+            'doc_author' => '',
+            'links' => [],
+            'placeholders' => [],
+            'error' => $error,
+        ];
+    }
+
+    private function append_bio_box_from_data(string $content, string $display_name, string $bio, int $image_id): string
+    {
+        $image_html = '';
+        if ($image_id > 0) {
+            $candidate = wp_get_attachment_image($image_id, 'thumbnail', false, ['class' => 'aiw-bio-box__image']);
+            if (is_string($candidate)) {
+                $image_html = $candidate;
+            }
+        }
+
+        $bio_html = '<div class="aiw-bio-box">';
+        if ($image_html !== '') {
+            $bio_html .= '<div class="aiw-bio-box__media">' . $image_html . '</div>';
+        }
+
+        $bio_html .= '<div class="aiw-bio-box__body">';
+        $bio_html .= '<h3 class="aiw-bio-box__name">' . esc_html($display_name) . '</h3>';
+        if ($bio !== '') {
+            $bio_html .= '<p class="aiw-bio-box__text">' . esc_html($bio) . '</p>';
+        }
+        $bio_html .= '</div></div>';
+
+        if ($content === '') {
+            return $bio_html;
+        }
+
+        return $content . "\n\n" . $bio_html;
     }
 
     private function build_inline_image_map(array $attachment_ids): array
@@ -461,6 +540,27 @@ class AIW_Wizard_Controller
         return $content;
     }
 
+    private function preview_transient_key(string $token): string
+    {
+        return 'aiw_preview_' . get_current_user_id() . '_' . $token;
+    }
+
+    private function store_preview_data(string $token, array $payload): void
+    {
+        set_transient($this->preview_transient_key($token), $payload, 2 * HOUR_IN_SECONDS);
+    }
+
+    private function get_preview_data(string $token): ?array
+    {
+        $payload = get_transient($this->preview_transient_key($token));
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function delete_preview_data(string $token): void
+    {
+        delete_transient($this->preview_transient_key($token));
+    }
+
     private function redirect_with_error(string $error): void
     {
         $url = add_query_arg(
@@ -468,6 +568,18 @@ class AIW_Wizard_Controller
             admin_url('admin.php')
         );
 
+        wp_safe_redirect($url);
+        exit;
+    }
+
+    private function redirect_to_preview(string $preview_token, string $message = ''): void
+    {
+        $args = ['page' => 'aiw-import-wizard', 'aiw_preview_token' => rawurlencode($preview_token)];
+        if ($message !== '') {
+            $args['aiw_message'] = rawurlencode($message);
+        }
+
+        $url = add_query_arg($args, admin_url('admin.php'));
         wp_safe_redirect($url);
         exit;
     }
