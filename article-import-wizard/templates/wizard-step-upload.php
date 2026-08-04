@@ -4,7 +4,10 @@ if (!defined('ABSPATH')) {
 }
 ?>
 <div class="wrap aiw-wrap">
-    <h1><?php esc_html_e('Article Import Wizard', 'article-import-wizard'); ?></h1>
+    <div class="aiw-header-row">
+        <h1><?php esc_html_e('Article Import Wizard', 'article-import-wizard'); ?></h1>
+        <a class="button" href="<?php echo esc_url((string) $help_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Help', 'article-import-wizard'); ?></a>
+    </div>
 
     <?php if (!empty($error)) : ?>
         <div class="notice notice-error">

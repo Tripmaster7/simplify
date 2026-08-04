@@ -189,6 +189,8 @@ To make imports predictable for non-technical authors, support a strict metadata
 Recommended tag syntax:
 - [TITLE: Your headline]
 - [SUBTITLE: Your sub-headline]
+- [HEADER 3 Headline 3]
+- [HEADER 4 Headline 4]
 - [AUTHOR_MEMBERSHIP: 123456]
 - [AUTHOR_NAME: Max Mustermann]
 - [WRITING_DATE: 2026-08-04]
@@ -210,6 +212,8 @@ Parsing behavior:
 - First valid occurrence wins
 - Value tags use [TAG: value]
 - Anchor tags use [TAG] (for example [RESTRICT])
+- Body header tags use [HEADER 3 ...] and [HEADER 4 ...]
+- H1 and H2 are reserved for title and subtitle only
 - Legacy flag tags are accepted for backward compatibility only
 - Unknown tags are ignored
 - Metadata tags are removed from final article body after parsing

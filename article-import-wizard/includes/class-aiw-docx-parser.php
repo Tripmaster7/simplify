@@ -71,6 +71,37 @@ class AIW_DOCX_Parser
                 continue;
             }
 
+            $header_tag = $this->extract_body_header_tag($text);
+            if (is_array($header_tag)) {
+                $header_level = isset($header_tag['level']) ? (int) $header_tag['level'] : 0;
+                $header_text = isset($header_tag['text']) ? trim((string) $header_tag['text']) : '';
+
+                if ($header_text === '') {
+                    continue;
+                }
+
+                if ($header_level === 1) {
+                    if ($title === '') {
+                        $title = $header_text;
+                        continue;
+                    }
+
+                    $text = $header_text;
+                } elseif ($header_level === 2) {
+                    if ($subtitle === '') {
+                        $subtitle = $header_text;
+                        continue;
+                    }
+
+                    $text = $header_text;
+                } elseif ($header_level === 3 || $header_level === 4) {
+                    $html_parts[] = '<h' . $header_level . '>' . esc_html($header_text) . '</h' . $header_level . '>';
+                    continue;
+                } else {
+                    $text = $header_text;
+                }
+            }
+
             $style = strtolower($paragraph['style']);
             if ($title === '' && ($this->contains($style, 'title') || $this->contains($style, 'heading1'))) {
                 $title = $text;
@@ -310,5 +341,17 @@ class AIW_DOCX_Parser
         $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+?)\]$/i', '$2', (string) $text);
 
         return trim((string) $text);
+    }
+
+    private function extract_body_header_tag(string $text): ?array
+    {
+        if (!preg_match('/^\[\s*HEADER\s*([1-6])\s*:?[ \t]+(.+?)\s*\]$/iu', trim($text), $matches)) {
+            return null;
+        }
+
+        return [
+            'level' => (int) ($matches[1] ?? 0),
+            'text' => trim((string) ($matches[2] ?? '')),
+        ];
     }
 }

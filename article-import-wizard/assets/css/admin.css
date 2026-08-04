@@ -14,6 +14,17 @@
     margin-top: 0;
 }
 
+.aiw-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.aiw-header-row h1 {
+    margin: 0;
+}
+
 .aiw-bio-box {
     margin-top: 28px;
     padding: 14px;

@@ -53,6 +53,7 @@ class AIW_Wizard_Controller
         $default_broken_link_mode = AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
         $default_restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
         $default_restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
+        $help_url = AIW_PLUGIN_URL . 'docs/editorial-cheat-sheet-print.html';
 
         include AIW_PLUGIN_DIR . 'templates/wizard-step-upload.php';
     }
