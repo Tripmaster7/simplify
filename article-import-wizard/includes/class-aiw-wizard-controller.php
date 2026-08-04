@@ -146,7 +146,6 @@ class AIW_Wizard_Controller
         $image_map = $this->build_inline_image_map($inline_image_ids);
         $missing_image_slots = [];
         $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots);
-        $content_with_images = $this->normalize_inline_figure_markup($content_with_images);
 
         $working_content = $this->build_restricted_article_body($content_with_images, $restriction_start, $metadata_warnings);
 
@@ -643,6 +642,10 @@ class AIW_Wizard_Controller
         $tag = strtolower($node->tagName);
 
         if ($tag === 'p') {
+            if ($node->getElementsByTagName('figure')->length > 0) {
+                return $this->convert_mixed_paragraph_node_to_blocks($node);
+            }
+
             return [$this->wrap_paragraph_block($this->dom_node_inner_html($node))];
         }
 
@@ -899,49 +902,39 @@ class AIW_Wizard_Controller
 
     private function normalize_inline_figure_markup(string $content): string
     {
-        if ($content === '') {
-            return $content;
-        }
-
-        $pattern = '/<p>(.*?)((?:\s*<figure\b[^>]*>.*?<\/figure>\s*)+)(.*?)<\/p>/is';
-        $previous = null;
-
-        while ($previous !== $content) {
-            $previous = $content;
-
-            $content = preg_replace_callback(
-                $pattern,
-                static function (array $matches): string {
-                    $before = trim((string) ($matches[1] ?? ''));
-                    $figures_group = (string) ($matches[2] ?? '');
-                    $after = trim((string) ($matches[3] ?? ''));
-
-                    $parts = [];
-                    if ($before !== '') {
-                        $parts[] = '<p>' . $before . '</p>';
-                    }
-
-                    if (preg_match_all('/<figure\b[^>]*>.*?<\/figure>/is', $figures_group, $figure_matches) && !empty($figure_matches[0])) {
-                        foreach ($figure_matches[0] as $figure_html) {
-                            $parts[] = trim((string) $figure_html);
-                        }
-                    }
-
-                    if ($after !== '') {
-                        $parts[] = '<p>' . $after . '</p>';
-                    }
-
-                    return implode("\n", $parts);
-                },
-                $content
-            );
-
-            if (!is_string($content)) {
-                return $previous;
-            }
-        }
-
         return $content;
+    }
+
+    private function convert_mixed_paragraph_node_to_blocks(DOMElement $paragraph): array
+    {
+        $blocks = [];
+        $buffer = '';
+
+        foreach (iterator_to_array($paragraph->childNodes) as $child) {
+            if ($child instanceof DOMElement && strtolower($child->tagName) === 'figure') {
+                $buffer = trim($buffer);
+                if ($buffer !== '') {
+                    $blocks[] = $this->wrap_paragraph_block($buffer);
+                    $buffer = '';
+                }
+
+                $blocks[] = $this->wrap_image_block($child);
+                continue;
+            }
+
+            $buffer .= $paragraph->ownerDocument->saveHTML($child);
+        }
+
+        $buffer = trim($buffer);
+        if ($buffer !== '') {
+            $blocks[] = $this->wrap_paragraph_block($buffer);
+        }
+
+        if (empty($blocks)) {
+            return [$this->wrap_paragraph_block($this->dom_node_inner_html($paragraph))];
+        }
+
+        return $blocks;
     }
 
     private function replace_invalid_links_in_content(string $content, array $invalid_urls): string
