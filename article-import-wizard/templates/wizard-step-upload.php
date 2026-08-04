@@ -95,7 +95,7 @@ if (!defined('ABSPATH')) {
 
             <h3><?php esc_html_e('Generated Content Preview', 'article-import-wizard'); ?></h3>
             <div class="aiw-preview-content">
-                <?php echo wp_kses_post((string) $preview_data['working_content']); ?>
+                <?php echo wp_kses_post(do_blocks((string) $preview_data['working_content'])); ?>
             </div>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -145,14 +145,6 @@ if (!defined('ABSPATH')) {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="aiw_restriction_start"><?php esc_html_e('Restriction Start Shortcode', 'article-import-wizard'); ?></label></th>
-                        <td><input id="aiw_restriction_start" name="aiw_restriction_start" type="text" class="regular-text" value="<?php echo esc_attr($default_restriction_start); ?>" /></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="aiw_restriction_end"><?php esc_html_e('Restriction End Shortcode', 'article-import-wizard'); ?></label></th>
-                        <td><input id="aiw_restriction_end" name="aiw_restriction_end" type="text" class="regular-text" value="<?php echo esc_attr($default_restriction_end); ?>" /></td>
-                    </tr>
-                    <tr>
                         <th scope="row"><label for="aiw_headline_image"><?php esc_html_e('Headline Picture', 'article-import-wizard'); ?></label></th>
                         <td><input id="aiw_headline_image" name="aiw_headline_image" type="file" accept="image/*" /></td>
                     </tr>
@@ -184,6 +176,7 @@ if (!defined('ABSPATH')) {
                                 <option value="replace" <?php selected($default_broken_link_mode, 'replace'); ?>><?php esc_html_e('Replace with CHECK LINK', 'article-import-wizard'); ?></option>
                                 <option value="flag_only" <?php selected($default_broken_link_mode, 'flag_only'); ?>><?php esc_html_e('Flag only', 'article-import-wizard'); ?></option>
                             </select>
+                            <p class="description"><?php esc_html_e('Restriction shortcodes come from plugin settings and DOCX markers.', 'article-import-wizard'); ?></p>
                         </td>
                     </tr>
                 </table>

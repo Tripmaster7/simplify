@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Editorial Cheat Sheet - Article Import Wizard</title>
+  <style>
+    :root {
+      --text: #111;
+      --muted: #444;
+      --line: #d9d9d9;
+      --panel: #f8f8f8;
+      --accent: #0b5cab;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      color: var(--text);
+      background: #fff;
+      font-family: "Segoe UI", "Calibri", "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.35;
+    }
+
+    .page {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 12mm;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      line-height: 1.2;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      padding: 10px;
+      break-inside: avoid;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #000;
+    }
+
+    ol, ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
+    }
+
+    li { margin: 2px 0; }
+
+    .tag-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 12px;
+    }
+
+    .tag-list li {
+      margin: 3px 0;
+      padding: 4px 6px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 11px;
+    }
+
+    .template {
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+    }
+
+    .warn {
+      color: #b30000;
+      font-weight: 700;
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      padding-top: 6px;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+
+      .page {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Editorial Cheat Sheet</h1>
+    <p class="subtitle">WordPress Article Import Wizard | Keep this page printed near your workstation.</p>
+
+    <section class="grid">
+      <article class="card">
+        <h2>1) Quick Workflow</h2>
+        <ol>
+          <li>Prepare article in Word and save as DOCX.</li>
+          <li>Open WordPress > Article Import Wizard.</li>
+          <li>Enter membership number of the real author.</li>
+          <li>Upload DOCX, headline image, inline images.</li>
+          <li>Click Generate Preview.</li>
+          <li>Check warnings for links and missing images.</li>
+          <li>Click Create Draft From Preview.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>2) Golden Rules</h2>
+        <ul>
+          <li>Use <strong>DOCX</strong> only (not DOC).</li>
+          <li>Membership number must be correct.</li>
+          <li>Editor account is internal only.</li>
+          <li>Public author comes from membership number.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>3) Metadata Tags in DOCX</h2>
+        <ul class="tag-list">
+          <li>[TITLE: Your headline]</li>
+          <li>[SUBTITLE: Your sub-headline]</li>
+          <li>[WRITING_DATE: 2026-08-04]</li>
+          <li>[AUTHOR_MEMBERSHIP: 123456]</li>
+          <li>[AUTHOR_NAME: First Last] (optional)</li>
+          <li>[BIO: Short author bio] (optional)</li>
+          <li>[RESTRICT_START] (optional)</li>
+          <li>[RESTRICT_END] (optional)</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>4) Inline Image Markers</h2>
+        <ul class="tag-list">
+          <li>[Bild 1]</li>
+          <li>[Bild 2: Caption]</li>
+          <li>[Image 3: English caption]</li>
+        </ul>
+        <ul>
+          <li>Numbering starts at 1.</li>
+          <li>Upload inline images in matching order.</li>
+          <li>If mismatch: preview shows warning.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>5) Copy/Paste DOCX Template</h2>
+        <div class="template">[TITLE: ]
+[SUBTITLE: ]
+[WRITING_DATE: ]
+[AUTHOR_MEMBERSHIP: ]
+[AUTHOR_NAME: ]
+
+[RESTRICT_START]
+
+First paragraph...
+Second paragraph with [Bild 1: Caption].
+Third paragraph with [Bild 2].
+
+[RESTRICT_END]
+
+[BIO: ]</div>
+      </article>
+
+      <article class="card">
+        <h2>6) Final Checklist</h2>
+        <ul>
+          <li>DOCX format confirmed.</li>
+          <li>Membership number confirmed.</li>
+          <li>Tags are complete and valid.</li>
+          <li>Image markers and uploads match.</li>
+          <li>Preview checked before draft creation.</li>
+          <li>If shown: <span class="warn">CHECK LINK</span> must be fixed before publish.</li>
+        </ul>
+      </article>
+    </section>
+
+    <p class="footer">
+      Tip: print at 100% scale on A4 portrait. Keep this as your standard article submission format.
+    </p>
+  </main>
+</body>
+</html>

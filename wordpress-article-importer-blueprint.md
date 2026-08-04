@@ -182,8 +182,45 @@ Supported inline marker pattern examples:
 - [Bild 1: Beschreibung]
 - [Image 1]
 
+### 9.1 Metadata Tags Scanned in DOCX
+To make imports predictable for non-technical authors, support a strict metadata block in the DOCX text.
+
+Recommended tag syntax:
+- [TITLE: Your headline]
+- [SUBTITLE: Your sub-headline]
+- [AUTHOR_MEMBERSHIP: 123456]
+- [AUTHOR_NAME: Max Mustermann]
+- [WRITING_DATE: 2026-08-04]
+- [RESTRICT_START]
+- [RESTRICT_END]
+- [BIO: Short author bio text]
+
+Supported aliases (optional):
+- TITLE: HEADLINE, H1
+- SUBTITLE: SUBHEADER, H2
+- AUTHOR_MEMBERSHIP: MEMBERSHIP, MEMBER_ID
+- WRITING_DATE: DATE
+
+Parsing behavior:
+- Case-insensitive tag names
+- First valid occurrence wins
+- Value tags use [TAG: value]
+- Flag tags use [TAG] (for example [RESTRICT_START])
+- Unknown tags are ignored
+- Metadata tags are removed from final article body after parsing
+
+Validation behavior:
+- Missing TITLE: error unless fallback title exists from DOCX style parsing
+- Missing AUTHOR_MEMBERSHIP: error (wizard still asks membership number and uses wizard value as source of truth)
+- Invalid WRITING_DATE format: warning in validation report
+- Duplicate metadata tags: warning in validation report
+
 Regex suggestion:
 - /\[(Bild|Image)\s*(\d+)\s*(?::[^\]]*)?\]/i
+
+Metadata regex suggestions:
+- Value tags: /\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]/i
+- Flag tags: /\[(RESTRICT_START|RESTRICT_END)\]/i
 
 Replacement logic:
 - Parse marker number N

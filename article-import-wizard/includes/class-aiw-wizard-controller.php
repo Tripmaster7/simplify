@@ -49,8 +49,6 @@ class AIW_Wizard_Controller
         $preview_token = isset($_GET['aiw_preview_token']) ? sanitize_text_field(wp_unslash($_GET['aiw_preview_token'])) : '';
         $preview_data = $preview_token !== '' ? $this->get_preview_data($preview_token) : null;
 
-        $default_restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
-        $default_restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
         $default_inline_slots = AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
         $default_broken_link_mode = AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
 
@@ -77,13 +75,8 @@ class AIW_Wizard_Controller
             ? wp_kses_post(wp_unslash($_POST['aiw_post_content']))
             : '';
 
-        $restriction_start = isset($_POST['aiw_restriction_start'])
-            ? sanitize_text_field(wp_unslash($_POST['aiw_restriction_start']))
-            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
-
-        $restriction_end = isset($_POST['aiw_restriction_end'])
-            ? sanitize_text_field(wp_unslash($_POST['aiw_restriction_end']))
-            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
+        $restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
+        $restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
 
         $inline_image_count = isset($_POST['aiw_inline_image_count'])
             ? max(0, (int) wp_unslash($_POST['aiw_inline_image_count']))
@@ -111,6 +104,13 @@ class AIW_Wizard_Controller
             $this->redirect_with_error((string) $doc_parse['error']);
         }
 
+        $doc_metadata = isset($doc_parse['metadata']) && is_array($doc_parse['metadata']) ? $doc_parse['metadata'] : [];
+        $metadata_warnings = [];
+
+        if (!empty($doc_metadata['author_membership']) && (string) $doc_metadata['author_membership'] !== $membership_number) {
+            $metadata_warnings[] = __('DOCX membership number does not match the wizard membership number.', 'article-import-wizard');
+        }
+
         if ($post_title === '' && !empty($doc_parse['title'])) {
             $post_title = sanitize_text_field((string) $doc_parse['title']);
         }
@@ -128,11 +128,7 @@ class AIW_Wizard_Controller
 
         $operator_user_id = get_current_user_id();
 
-        $working_content = $this->shortcode_service->inject_restriction_shortcodes(
-            $post_content,
-            $restriction_start,
-            $restriction_end
-        );
+        $working_content = $this->apply_restriction_markers($post_content, $restriction_start, $restriction_end);
 
         $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
         $inline_image_ids = $this->upload_multiple_images('aiw_inline_images', $inline_image_count, 0);
@@ -174,6 +170,8 @@ class AIW_Wizard_Controller
             $working_content = $this->replace_invalid_links_in_content($working_content, $invalid_urls);
         }
 
+        $working_content = $this->convert_to_block_markup($working_content);
+
         $source_filename = isset($_FILES['aiw_docx_file']['name'])
             ? sanitize_file_name(wp_unslash($_FILES['aiw_docx_file']['name']))
             : '';
@@ -184,6 +182,7 @@ class AIW_Wizard_Controller
             'broken_link_mode' => $broken_link_mode,
             'writing_date' => isset($doc_parse['writing_date']) ? (string) $doc_parse['writing_date'] : '',
             'doc_author' => isset($doc_parse['doc_author']) ? (string) $doc_parse['doc_author'] : '',
+            'metadata_warnings' => $metadata_warnings,
         ];
 
         $preview_payload = [
@@ -205,6 +204,7 @@ class AIW_Wizard_Controller
             'final_author_bio' => $final_author_bio,
             'validation_report' => $validation_report,
             'invalid_links_count' => count($link_validation['invalid']),
+            'metadata_warnings' => $metadata_warnings,
             'created_at' => gmdate('c'),
         ];
 
@@ -237,12 +237,14 @@ class AIW_Wizard_Controller
 
         $operator_user_id = get_current_user_id();
 
+        $attributed_author_user_id = isset($preview['attributed_author_user_id']) ? (int) $preview['attributed_author_user_id'] : 0;
+
         $post_id = wp_insert_post([
             'post_type' => 'post',
             'post_status' => 'draft',
             'post_title' => (string) $preview['post_title'],
             'post_content' => (string) $preview['working_content'],
-            'post_author' => $operator_user_id,
+            'post_author' => $attributed_author_user_id > 0 ? $attributed_author_user_id : $operator_user_id,
         ], true);
 
         if (is_wp_error($post_id)) {
@@ -315,7 +317,7 @@ class AIW_Wizard_Controller
         $message = sprintf(
             __('Draft #%1$s created. Attributed author: %2$s', 'article-import-wizard'),
             $post_id,
-            isset($preview['membership_number']) ? (string) $preview['membership_number'] : ''
+            isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : ''
         );
 
         $this->redirect_with_message($message, $edit_url);
@@ -395,6 +397,46 @@ class AIW_Wizard_Controller
         }
 
         return $content . "\n\n" . $bio_html;
+    }
+
+    private function apply_restriction_markers(string $content, string $restriction_start, string $restriction_end): string
+    {
+        $restriction_start = trim($restriction_start);
+        $restriction_end = trim($restriction_end);
+
+        if ($restriction_start === '' || $restriction_end === '') {
+            return $content;
+        }
+
+        if (stripos($content, '[RESTRICT_START]') !== false || stripos($content, '[RESTRICT_END]') !== false) {
+            $content = str_ireplace('[RESTRICT_START]', $restriction_start, $content);
+            $content = str_ireplace('[RESTRICT_END]', $restriction_end, $content);
+            return $content;
+        }
+
+        return $restriction_start . "\n" . $content . "\n" . $restriction_end;
+    }
+
+    private function convert_to_block_markup(string $content): string
+    {
+        $content = trim($content);
+        if ($content === '') {
+            return $content;
+        }
+
+        $segments = preg_split('/\r?\n\r?\n+/', $content) ?: [$content];
+        $blocks = [];
+
+        foreach ($segments as $segment) {
+            $segment = trim((string) $segment);
+            if ($segment === '') {
+                continue;
+            }
+
+            $blocks[] = "<!-- wp:html -->\n" . $segment . "\n<!-- /wp:html -->";
+        }
+
+        return implode("\n\n", $blocks);
     }
 
     private function build_inline_image_map(array $attachment_ids): array

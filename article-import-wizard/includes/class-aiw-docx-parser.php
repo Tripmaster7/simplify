@@ -56,10 +56,17 @@ class AIW_DOCX_Parser
         $paragraphs = $this->extract_paragraphs($document_xml);
         $title = '';
         $subtitle = '';
+        $metadata = [];
         $html_parts = [];
 
         foreach ($paragraphs as $paragraph) {
             $text = trim($paragraph['text']);
+            if ($text === '') {
+                continue;
+            }
+
+            $text = $this->extract_metadata_from_text($text, $metadata);
+            $text = trim($text);
             if ($text === '') {
                 continue;
             }
@@ -94,12 +101,29 @@ class AIW_DOCX_Parser
         $links = $this->extract_urls_from_text($content);
         $placeholders = $this->extract_image_placeholders($content);
 
+        if (!empty($metadata['title']) && $title === '') {
+            $title = (string) $metadata['title'];
+        }
+
+        if (!empty($metadata['subtitle']) && $subtitle === '') {
+            $subtitle = (string) $metadata['subtitle'];
+        }
+
+        if (!empty($metadata['writing_date'])) {
+            $writing_date = (string) $metadata['writing_date'];
+        }
+
+        if (!empty($metadata['author_name']) && $doc_author === '') {
+            $doc_author = (string) $metadata['author_name'];
+        }
+
         return [
             'title' => $title,
             'subtitle' => $subtitle,
             'content' => $content,
             'writing_date' => $writing_date,
             'doc_author' => $doc_author,
+            'metadata' => $metadata,
             'links' => $links,
             'placeholders' => $placeholders,
             'error' => '',
@@ -217,6 +241,52 @@ class AIW_DOCX_Parser
         }
 
         return $results;
+    }
+
+    private function extract_metadata_from_text(string $text, array &$metadata): string
+    {
+        $patterns = [
+            'title' => '/\[(TITLE|HEADLINE|H1)\s*:\s*([^\]]+)\]/i',
+            'subtitle' => '/\[(SUBTITLE|SUBHEADER|H2)\s*:\s*([^\]]+)\]/i',
+            'author_membership' => '/\[(AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID)\s*:\s*([^\]]+)\]/i',
+            'author_name' => '/\[(AUTHOR_NAME)\s*:\s*([^\]]+)\]/i',
+            'writing_date' => '/\[(WRITING_DATE|DATE)\s*:\s*([^\]]+)\]/i',
+            'bio' => '/\[(BIO)\s*:\s*([^\]]+)\]/i',
+        ];
+
+        foreach ($patterns as $key => $pattern) {
+            if (preg_match_all($pattern, $text, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    $value = isset($match[2]) ? trim((string) $match[2]) : '';
+                    if ($value === '') {
+                        continue;
+                    }
+
+                    if (!isset($metadata[$key])) {
+                        $metadata[$key] = $value;
+                    } elseif (!isset($metadata[$key . '_duplicate'])) {
+                        $metadata[$key . '_duplicate'] = true;
+                    }
+                }
+
+                $text = (string) preg_replace($pattern, '', $text);
+            }
+        }
+
+        if (preg_match('/\[(RESTRICT_START|RESTRICT_END)\]/i', $text)) {
+            if (!isset($metadata['restriction_flags'])) {
+                $metadata['restriction_flags'] = [];
+            }
+
+            if (stripos($text, '[RESTRICT_START]') !== false) {
+                $metadata['restriction_flags'][] = 'RESTRICT_START';
+            }
+            if (stripos($text, '[RESTRICT_END]') !== false) {
+                $metadata['restriction_flags'][] = 'RESTRICT_END';
+            }
+        }
+
+        return $text;
     }
 
     private function contains(string $haystack, string $needle): bool
