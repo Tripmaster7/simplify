@@ -116,13 +116,13 @@ class AIW_Wizard_Controller
         }
 
         if ($post_title === '' && !empty($doc_parse['title'])) {
-            $post_title = sanitize_text_field((string) $doc_parse['title']);
+            $post_title = $this->normalize_title_text((string) $doc_parse['title']);
         }
 
         if ($post_content === '' && !empty($doc_parse['content'])) {
             $post_content = wp_kses_post((string) $doc_parse['content']);
             if (!empty($doc_parse['subtitle'])) {
-                $post_content = '<h2>' . esc_html((string) $doc_parse['subtitle']) . '</h2>' . "\n" . $post_content;
+                $post_content = '<h2>' . esc_html($this->normalize_title_text((string) $doc_parse['subtitle'])) . '</h2>' . "\n" . $post_content;
             }
         }
 
@@ -433,7 +433,7 @@ class AIW_Wizard_Controller
             return $content;
         }
 
-        $segments = preg_split('/\r?\n\r?\n+/', $content) ?: [$content];
+        $segments = $this->split_block_segments($content);
         $blocks = [];
 
         foreach ($segments as $segment) {
@@ -452,10 +452,158 @@ class AIW_Wizard_Controller
                 continue;
             }
 
-            $blocks[] = "<!-- wp:html -->\n" . $segment . "\n<!-- /wp:html -->";
+            $blocks = array_merge($blocks, $this->html_fragment_to_blocks($segment));
         }
 
         return implode("\n\n", $blocks);
+    }
+
+    private function split_block_segments(string $content): array
+    {
+        $pattern = '/(<!--\s*wp:shortcode\s*-->.*?<!--\s*\/wp:shortcode\s*-->)/is';
+        $parts = preg_split($pattern, $content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+
+        return is_array($parts) ? $parts : [$content];
+    }
+
+    private function html_fragment_to_blocks(string $html): array
+    {
+        $html = trim($html);
+        if ($html === '') {
+            return [];
+        }
+
+        $document = new DOMDocument('1.0', 'UTF-8');
+        libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="utf-8" ?><div id="aiw-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $root = $document->getElementById('aiw-root');
+        if (!$root instanceof DOMElement) {
+            return ["<!-- wp:html -->\n" . $html . "\n<!-- /wp:html -->"];
+        }
+
+        $blocks = [];
+        foreach (iterator_to_array($root->childNodes) as $node) {
+            if ($node instanceof DOMText && trim($node->wholeText) === '') {
+                continue;
+            }
+
+            if ($node instanceof DOMElement) {
+                $blocks = array_merge($blocks, $this->convert_dom_element_to_blocks($node));
+                continue;
+            }
+
+            if ($node instanceof DOMComment) {
+                $comment = trim($node->nodeValue);
+                if ($comment !== '') {
+                    $blocks[] = '<!-- ' . $comment . ' -->';
+                }
+            }
+        }
+
+        return $blocks;
+    }
+
+    private function convert_dom_element_to_blocks(DOMElement $node): array
+    {
+        $tag = strtolower($node->tagName);
+
+        if ($tag === 'p') {
+            return [$this->wrap_paragraph_block($this->dom_node_inner_html($node))];
+        }
+
+        if ($tag === 'h1' || $tag === 'h2' || $tag === 'h3' || $tag === 'h4' || $tag === 'h5' || $tag === 'h6') {
+            return [$this->wrap_heading_block((int) substr($tag, 1), $this->dom_node_inner_html($node))];
+        }
+
+        if ($tag === 'figure' || strpos((string) $node->getAttribute('class'), 'wp-block-image') !== false) {
+            return [$this->wrap_image_block($node)];
+        }
+
+        if (strpos((string) $node->getAttribute('class'), 'aiw-bio-box') !== false) {
+            return ["<!-- wp:html -->\n" . $this->dom_node_outer_html($node) . "\n<!-- /wp:html -->"];
+        }
+
+        return ["<!-- wp:html -->\n" . $this->dom_node_outer_html($node) . "\n<!-- /wp:html -->"];
+    }
+
+    private function wrap_paragraph_block(string $inner_html): string
+    {
+        return "<!-- wp:paragraph -->\n<p>" . trim($inner_html) . "</p>\n<!-- /wp:paragraph -->";
+    }
+
+    private function wrap_heading_block(int $level, string $inner_html): string
+    {
+        $level = max(1, min(6, $level));
+
+        return '<!-- wp:heading {"level":' . $level . '} -->\n<h' . $level . '>' . trim($inner_html) . '</h' . $level . '>\n<!-- /wp:heading -->';
+    }
+
+    private function wrap_image_block(DOMElement $node): string
+    {
+        $img = null;
+        foreach ($node->getElementsByTagName('img') as $candidate) {
+            $img = $candidate;
+            break;
+        }
+
+        if (!$img instanceof DOMElement) {
+            return "<!-- wp:html -->\n" . $this->dom_node_outer_html($node) . "\n<!-- /wp:html -->";
+        }
+
+        $src = (string) $img->getAttribute('src');
+        $alt = (string) $img->getAttribute('alt');
+        $class = (string) $img->getAttribute('class');
+        $id = 0;
+
+        if (preg_match('/wp-image-(\d+)/', $class, $matches)) {
+            $id = (int) $matches[1];
+        }
+
+        $caption = '';
+        foreach ($node->getElementsByTagName('figcaption') as $candidate) {
+            $caption = trim($candidate->textContent);
+            break;
+        }
+
+        $block = '<!-- wp:image ' . wp_json_encode(array_filter([
+            'id' => $id > 0 ? $id : null,
+            'sizeSlug' => 'full',
+            'linkDestination' => 'none',
+        ]), JSON_UNESCAPED_SLASHES) . ' -->';
+        $block .= '<figure class="wp-block-image size-full">';
+        $block .= '<img src="' . esc_url($src) . '" alt="' . esc_attr($alt) . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
+        if ($caption !== '') {
+            $block .= '<figcaption>' . esc_html($caption) . '</figcaption>';
+        }
+        $block .= '</figure><!-- /wp:image -->';
+
+        return $block;
+    }
+
+    private function dom_node_inner_html(DOMNode $node): string
+    {
+        $html = '';
+        foreach ($node->childNodes as $child) {
+            $html .= $node->ownerDocument->saveHTML($child);
+        }
+
+        return $html;
+    }
+
+    private function dom_node_outer_html(DOMNode $node): string
+    {
+        return $node->ownerDocument->saveHTML($node) ?: '';
+    }
+
+    private function normalize_title_text(string $text): string
+    {
+        $text = trim($text);
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]$/i', '$2', $text);
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\]$/i', '', (string) $text);
+
+        return trim((string) $text);
     }
 
     private function build_inline_image_map(array $attachment_ids): array

@@ -28,10 +28,17 @@ class AIW_Image_Mapper
                 $image_data = $image_map[$index];
                 $url = isset($image_data['url']) ? esc_url($image_data['url']) : '';
                 $alt = isset($image_data['alt']) ? esc_attr($image_data['alt']) : '';
+                $id = isset($image_data['id']) ? (int) $image_data['id'] : 0;
                 $caption = isset($matches[3]) ? trim((string) $matches[3]) : '';
-                $caption_html = $caption !== '' ? '<figcaption>' . esc_html($caption) . '</figcaption>' : '';
 
-                return '<figure class="aiw-inline-image"><img src="' . $url . '" alt="' . $alt . '" />' . $caption_html . '</figure>';
+                $figure = '<figure class="aiw-inline-image wp-block-image size-full">';
+                $figure .= '<img src="' . $url . '" alt="' . $alt . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
+                if ($caption !== '') {
+                    $figure .= '<figcaption>' . esc_html($caption) . '</figcaption>';
+                }
+                $figure .= '</figure>';
+
+                return $figure;
             },
             $content
         );

@@ -105,9 +105,13 @@ class AIW_DOCX_Parser
             $title = (string) $metadata['title'];
         }
 
+        $title = $this->normalize_metadata_text($title);
+
         if (!empty($metadata['subtitle']) && $subtitle === '') {
             $subtitle = (string) $metadata['subtitle'];
         }
+
+        $subtitle = $this->normalize_metadata_text($subtitle);
 
         if (!empty($metadata['writing_date'])) {
             $writing_date = (string) $metadata['writing_date'];
@@ -298,5 +302,13 @@ class AIW_DOCX_Parser
     private function contains(string $haystack, string $needle): bool
     {
         return strpos($haystack, $needle) !== false;
+    }
+
+    private function normalize_metadata_text(string $text): string
+    {
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^"]+?)\]$/i', '$2', trim($text));
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+?)\]$/i', '$2', (string) $text);
+
+        return trim((string) $text);
     }
 }
