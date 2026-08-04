@@ -277,23 +277,23 @@ class AIW_DOCX_Parser
             }
         }
 
-        if (preg_match('/\[\s*RESTRICT\s*\]/iu', $text)) {
+        if (preg_match('/\[\s*RESTRICT(?:_START)?\s*\]/iu', $text)) {
             $metadata['restriction_anchor'] = true;
         }
 
-        if (preg_match('/\[(RESTRICT_START|RESTRICT_END)\]/i', $text)) {
+        if (preg_match('/\[\s*(RESTRICT_START|RESTRICT_END)\s*\]/iu', $text)) {
             if (!isset($metadata['restriction_flags'])) {
                 $metadata['restriction_flags'] = [];
             }
 
-            if (stripos($text, '[RESTRICT_START]') !== false) {
+            if (preg_match('/\[\s*RESTRICT_START\s*\]/iu', $text)) {
                 $metadata['restriction_flags'][] = 'RESTRICT_START';
             }
-            if (stripos($text, '[RESTRICT_END]') !== false) {
+            if (preg_match('/\[\s*RESTRICT_END\s*\]/iu', $text)) {
                 $metadata['restriction_flags'][] = 'RESTRICT_END';
             }
 
-            $text = str_ireplace(['[RESTRICT_START]', '[RESTRICT_END]'], '', $text);
+            $text = (string) preg_replace('/\[\s*RESTRICT_(?:START|END)\s*\]/iu', '', $text);
         }
 
         return $text;

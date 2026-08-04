@@ -444,6 +444,8 @@ class AIW_Wizard_Controller
     private function build_restricted_article_body(string $content, string $restriction_start, array &$metadata_warnings): string
     {
         $restriction_start = trim($restriction_start);
+        $content = $this->normalize_restriction_markers($content);
+
         if (!$this->contains_restriction_anchor($content)) {
             $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
             if ($restriction_start === '') {
@@ -498,7 +500,7 @@ class AIW_Wizard_Controller
     {
         $inner_html = $this->dom_node_inner_html($node);
         if (!$anchor_inserted && $this->contains_restriction_anchor($inner_html)) {
-            $parts = preg_split('/\[\s*RESTRICT\s*\]/iu', $inner_html, 2);
+            $parts = preg_split('/\[\s*RESTRICT(?:_START)?\s*\]/iu', $inner_html, 2);
             $before_html = isset($parts[0]) ? trim((string) $parts[0]) : '';
             $after_html = isset($parts[1]) ? trim((string) $parts[1]) : '';
 
@@ -719,7 +721,15 @@ class AIW_Wizard_Controller
 
     private function contains_restriction_anchor(string $text): bool
     {
-        return preg_match('/\[\s*RESTRICT\s*\]/iu', $text) === 1;
+        return preg_match('/\[\s*RESTRICT(?:_START)?\s*\]/iu', $text) === 1;
+    }
+
+    private function normalize_restriction_markers(string $text): string
+    {
+        $text = preg_replace('/\[\s*RESTRICT_START\s*\]/iu', '[RESTRICT]', $text);
+        $text = preg_replace('/\[\s*RESTRICT_END\s*\]/iu', '', (string) $text);
+
+        return (string) $text;
     }
 
     private function dom_node_inner_html(DOMNode $node): string
