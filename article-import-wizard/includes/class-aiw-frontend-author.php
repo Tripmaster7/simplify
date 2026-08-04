@@ -9,9 +9,18 @@ class AIW_Frontend_Author
     public function register(): void
     {
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_styles']);
+        add_action('wp', [$this, 'register_author_filters_for_imported_singular']);
+    }
+
+    public function register_author_filters_for_imported_singular(): void
+    {
+        if (!$this->should_filter_frontend_author()) {
+            return;
+        }
+
         add_filter('the_author', [$this, 'filter_author_name']);
         add_filter('get_the_author_display_name', [$this, 'filter_author_name']);
-        add_filter('author_link', [$this, 'filter_author_link']);
+        add_filter('author_link', [$this, 'filter_author_link'], 10, 3);
     }
 
     public function enqueue_frontend_styles(): void
@@ -51,7 +60,7 @@ class AIW_Frontend_Author
         return $author->display_name;
     }
 
-    public function filter_author_link($link): string
+    public function filter_author_link($link, $author_id = 0, $author_nicename = ''): string
     {
         if (!$this->should_filter_frontend_author()) {
             return is_string($link) ? $link : '';
@@ -71,26 +80,30 @@ class AIW_Frontend_Author
             return false;
         }
 
-        $post = get_post();
-        if (!$post) {
+        $post_id = get_queried_object_id();
+        if ($post_id <= 0) {
             return false;
         }
 
-        return (int) get_post_meta($post->ID, '_aiw_imported', true) === 1;
+        if ((int) get_post_meta($post_id, '_aiw_imported', true) !== 1) {
+            return false;
+        }
+
+        return (int) get_post_meta($post_id, '_aiw_attributed_author_user_id', true) > 0;
     }
 
     private function get_attributed_author_from_current_post(): ?WP_User
     {
-        $post = get_post();
-        if (!$post) {
+        $post_id = get_queried_object_id();
+        if ($post_id <= 0) {
             return null;
         }
 
-        if ((int) get_post_meta($post->ID, '_aiw_imported', true) !== 1) {
+        if ((int) get_post_meta($post_id, '_aiw_imported', true) !== 1) {
             return null;
         }
 
-        $attributed_author_id = (int) get_post_meta($post->ID, '_aiw_attributed_author_user_id', true);
+        $attributed_author_id = (int) get_post_meta($post_id, '_aiw_attributed_author_user_id', true);
         if ($attributed_author_id <= 0) {
             return null;
         }

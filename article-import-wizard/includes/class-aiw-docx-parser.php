@@ -86,15 +86,9 @@ class AIW_DOCX_Parser
                         continue;
                     }
 
-                    $text = $header_text;
-                } elseif ($header_level === 2) {
-                    if ($subtitle === '') {
-                        $subtitle = $header_text;
-                        continue;
-                    }
-
-                    $text = $header_text;
-                } elseif ($header_level === 3 || $header_level === 4) {
+                    $html_parts[] = '<h1>' . esc_html($header_text) . '</h1>';
+                    continue;
+                } elseif ($header_level >= 2 && $header_level <= 6) {
                     $html_parts[] = '<h' . $header_level . '>' . esc_html($header_text) . '</h' . $header_level . '>';
                     continue;
                 } else {
