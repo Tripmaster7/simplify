@@ -345,12 +345,12 @@ class AIW_DOCX_Parser
 
     private function extract_body_header_tag(string $text): ?array
     {
-        if (!preg_match('/^\[\s*HEADER\s*([1-6])\s*:?[ \t]+(.+?)\s*\]$/iu', trim($text), $matches)) {
+        if (!preg_match('/^\[\s*HEADER(?:\s+([1-6]))?\s*:?\s+(.+?)\s*\]$/iu', trim($text), $matches)) {
             return null;
         }
 
         return [
-            'level' => (int) ($matches[1] ?? 0),
+            'level' => isset($matches[1]) && $matches[1] !== '' ? (int) $matches[1] : 2,
             'text' => trim((string) ($matches[2] ?? '')),
         ];
     }

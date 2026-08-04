@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Editorial Cheat Sheet - Article Import Wizard</title>
+  <title>Redaktions-Spickzettel - Artikel-Import-Assistent</title>
   <style>
     :root {
       --text: #111;
@@ -130,69 +130,71 @@
 </head>
 <body>
   <main class="page">
-    <h1>Editorial Cheat Sheet</h1>
-    <p class="subtitle">WordPress Article Import Wizard | Keep this page printed near your workstation.</p>
+    <h1>Redaktions-Spickzettel</h1>
+    <p class="subtitle">WordPress Artikel-Import-Assistent | Diese Seite ausdrucken und am Arbeitsplatz bereithalten.</p>
 
     <section class="grid">
       <article class="card">
-        <h2>1) Quick Workflow</h2>
+        <h2>1) Schnellablauf</h2>
         <ol>
-          <li>Prepare article in Word and save as DOCX.</li>
-          <li>Open WordPress > Article Import Wizard.</li>
-          <li>Enter membership number of the real author.</li>
-          <li>Upload DOCX, headline image, inline images.</li>
-          <li>Click Generate Preview.</li>
-          <li>Check warnings for links and missing images.</li>
-          <li>Click Create Draft From Preview.</li>
+          <li>Artikel in Word vorbereiten und als DOCX speichern.</li>
+          <li>In WordPress den Artikel-Import-Assistenten öffnen.</li>
+          <li>Mitgliedsnummer des echten Autors eingeben.</li>
+          <li>DOCX, Aufmacherbild und Inline-Bilder hochladen.</li>
+          <li>Auf Vorschau erzeugen klicken.</li>
+          <li>Warnungen zu Links und fehlenden Bildern prüfen.</li>
+          <li>Auf Entwurf aus Vorschau erstellen klicken.</li>
         </ol>
       </article>
 
       <article class="card">
-        <h2>2) Golden Rules</h2>
+        <h2>2) Grundregeln</h2>
         <ul>
-          <li>Use <strong>DOCX</strong> only (not DOC).</li>
-          <li>Membership number must be correct.</li>
-          <li>Editor account is internal only.</li>
-          <li>Public author comes from membership number.</li>
+          <li>Nur <strong>DOCX</strong> verwenden, nicht DOC.</li>
+          <li>Die Mitgliedsnummer muss korrekt sein.</li>
+          <li>Das Redaktionskonto ist nur intern sichtbar.</li>
+          <li>Der öffentliche Autor wird aus der Mitgliedsnummer ermittelt.</li>
         </ul>
       </article>
 
       <article class="card">
-        <h2>3) Metadata Tags in DOCX</h2>
+        <h2>3) Metadaten-Tags in der DOCX</h2>
         <ul class="tag-list">
-          <li>[TITLE: Your headline]</li>
-          <li>[SUBTITLE: Your sub-headline]</li>
-          <li>[HEADER 3 Headline 3] (body H3 block)</li>
-          <li>[HEADER 4 Headline 4] (body H4 block)</li>
+          <li>[TITLE: Ihre Überschrift]</li>
+          <li>[SUBTITLE: Ihre Unterzeile]</li>
+          <li>[HEADER Zwischenüberschrift] (ergibt im Text ein H2)</li>
+          <li>[HEADER 3 Zwischenüberschrift] (ergibt im Text ein H3)</li>
+          <li>[HEADER 4 Zwischenüberschrift] (ergibt im Text ein H4)</li>
           <li>[WRITING_DATE: 2026-08-04]</li>
           <li>[AUTHOR_MEMBERSHIP: 123456]</li>
-          <li>[AUTHOR_NAME: First Last] (optional)</li>
-          <li>[BIO: Short author bio] (optional)</li>
-          <li>[RESTRICT] (anchor for restricted section)</li>
-          <li>[RESTRICT_START] / [RESTRICT_END] (legacy fallback only)</li>
+          <li>[AUTHOR_NAME: Vorname Nachname] (optional)</li>
+          <li>[BIO: Kurze Autoren-Bio] (optional)</li>
+          <li>[RESTRICT] (Anker für den eingeschränkten Bereich)</li>
+          <li>[RESTRICT_START] / [RESTRICT_END] (nur Altformat)</li>
         </ul>
         <ul>
-          <li>H1 and H2 are reserved for title/subtitle only.</li>
-          <li>Use HEADER 3 and HEADER 4 tags inside article body.</li>
+          <li>H1 bleibt dem Titel vorbehalten.</li>
+          <li>H2 kommt aus dem Untertitel oder aus einem einfachen [HEADER]-Tag im Text.</li>
+          <li>Für tiefere Ebenen im Fließtext [HEADER 3] und [HEADER 4] verwenden.</li>
         </ul>
       </article>
 
       <article class="card">
-        <h2>4) Inline Image Markers</h2>
+        <h2>4) Inline-Bildmarker</h2>
         <ul class="tag-list">
           <li>[Bild 1]</li>
-          <li>[Bild 2: Caption]</li>
+          <li>[Bild 2: Bildunterschrift]</li>
           <li>[Image 3: English caption]</li>
         </ul>
         <ul>
-          <li>Numbering starts at 1.</li>
-          <li>Upload inline images in matching order.</li>
-          <li>If mismatch: preview shows warning.</li>
+          <li>Die Nummerierung beginnt bei 1.</li>
+          <li>Inline-Bilder in exakt derselben Reihenfolge hochladen.</li>
+          <li>Bei Abweichungen zeigt die Vorschau eine Warnung.</li>
         </ul>
       </article>
 
       <article class="card">
-        <h2>5) Copy/Paste DOCX Template</h2>
+        <h2>5) DOCX-Vorlage zum Kopieren</h2>
         <div class="template">[TITLE: ]
 [SUBTITLE: ]
 [WRITING_DATE: ]
@@ -201,36 +203,39 @@
 
 [RESTRICT]
 
-First paragraph...
-Second paragraph with [Bild 1: Caption].
-Third paragraph with [Bild 2].
+Erster Absatz...
+Zweiter Absatz mit [Bild 1: Bildunterschrift].
+Dritter Absatz mit [Bild 2].
 
-[HEADER 3 Background]
-Section paragraph...
+[HEADER Zwischenüberschrift]
+Absatz auf Ebene H2...
+
+[HEADER 3 Hintergrund]
+Absatz auf Ebene H3...
 
 [HEADER 4 Detail]
-Detail paragraph...
+Absatz auf Ebene H4...
 
-[RESTRICT_END]  (legacy fallback only; the wizard inserts the closing shortcode before the bio)
+[RESTRICT_END]  (nur Altformat; der Assistent setzt den schließenden Shortcode normalerweise vor die Bio)
 
 [BIO: ]</div>
       </article>
 
       <article class="card">
-        <h2>6) Final Checklist</h2>
+        <h2>6) Abschluss-Checkliste</h2>
         <ul>
-          <li>DOCX format confirmed.</li>
-          <li>Membership number confirmed.</li>
-          <li>Tags are complete and valid.</li>
-          <li>Image markers and uploads match.</li>
-          <li>Preview checked before draft creation.</li>
-          <li>If shown: <span class="warn">CHECK LINK</span> must be fixed before publish.</li>
+          <li>DOCX-Format bestätigt.</li>
+          <li>Mitgliedsnummer bestätigt.</li>
+          <li>Alle Tags vollständig und korrekt.</li>
+          <li>Bildmarker und Uploads passen zusammen.</li>
+          <li>Vorschau vor der Entwurfserstellung geprüft.</li>
+          <li>Falls angezeigt: <span class="warn">CHECK LINK</span> vor der Veröffentlichung korrigieren.</li>
         </ul>
       </article>
     </section>
 
     <p class="footer">
-      Tip: print at 100% scale on A4 portrait. Keep this as your standard article submission format.
+      Tipp: Bei 100 % auf A4 Hochformat drucken. Diese Vorlage als Standard für Artikellieferungen verwenden.
     </p>
   </main>
 </body>

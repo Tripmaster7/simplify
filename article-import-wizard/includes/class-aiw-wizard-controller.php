@@ -834,6 +834,8 @@ class AIW_Wizard_Controller
             return 0;
         }
 
+        $this->normalize_uploaded_image_orientation((int) $attachment_id);
+
         return (int) $attachment_id;
     }
 
@@ -894,6 +896,7 @@ class AIW_Wizard_Controller
             unset($_FILES[$tmp_key]);
 
             if (!is_wp_error($attachment_id)) {
+                $this->normalize_uploaded_image_orientation((int) $attachment_id);
                 $attachment_ids[] = (int) $attachment_id;
             }
         }
@@ -906,6 +909,105 @@ class AIW_Wizard_Controller
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
+    }
+
+    private function normalize_uploaded_image_orientation(int $attachment_id): void
+    {
+        if ($attachment_id <= 0) {
+            return;
+        }
+
+        $file_path = get_attached_file($attachment_id);
+        if (!is_string($file_path) || $file_path === '' || !file_exists($file_path)) {
+            return;
+        }
+
+        $editor = wp_get_image_editor($file_path);
+        if (is_wp_error($editor)) {
+            return;
+        }
+
+        $did_rotate = false;
+
+        if (method_exists($editor, 'maybe_exif_rotate')) {
+            $result = $editor->maybe_exif_rotate();
+            if (is_wp_error($result)) {
+                return;
+            }
+            $did_rotate = true;
+        } elseif (function_exists('exif_read_data')) {
+            $orientation = $this->read_image_orientation($file_path);
+            $did_rotate = $this->apply_exif_orientation_to_editor($editor, $orientation);
+        }
+
+        if (!$did_rotate) {
+            return;
+        }
+
+        $saved = $editor->save($file_path);
+        if (is_wp_error($saved)) {
+            return;
+        }
+
+        $metadata = wp_generate_attachment_metadata($attachment_id, $file_path);
+        if (is_array($metadata)) {
+            wp_update_attachment_metadata($attachment_id, $metadata);
+        }
+    }
+
+    private function read_image_orientation(string $file_path): int
+    {
+        if (!function_exists('exif_read_data')) {
+            return 1;
+        }
+
+        $exif_data = @exif_read_data($file_path);
+        if (!is_array($exif_data) || empty($exif_data['Orientation'])) {
+            return 1;
+        }
+
+        return (int) $exif_data['Orientation'];
+    }
+
+    private function apply_exif_orientation_to_editor($editor, int $orientation): bool
+    {
+        switch ($orientation) {
+            case 2:
+                if (method_exists($editor, 'flip')) {
+                    $editor->flip(true, false);
+                    return true;
+                }
+                return false;
+            case 3:
+                $editor->rotate(180);
+                return true;
+            case 4:
+                if (method_exists($editor, 'flip')) {
+                    $editor->flip(false, true);
+                    return true;
+                }
+                return false;
+            case 5:
+                if (method_exists($editor, 'flip')) {
+                    $editor->flip(true, false);
+                }
+                $editor->rotate(90);
+                return true;
+            case 6:
+                $editor->rotate(-90);
+                return true;
+            case 7:
+                if (method_exists($editor, 'flip')) {
+                    $editor->flip(true, false);
+                }
+                $editor->rotate(-90);
+                return true;
+            case 8:
+                $editor->rotate(90);
+                return true;
+            default:
+                return false;
+        }
     }
 
     private function extract_links_from_content(string $content): array
