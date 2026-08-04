@@ -46,6 +46,17 @@
     overflow: auto;
 }
 
+.aiw-preview-content figure,
+.aiw-preview-content img {
+    max-width: 100%;
+}
+
+.aiw-preview-content img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
 .aiw-list {
     margin: 0 0 12px 18px;
     list-style: disc;

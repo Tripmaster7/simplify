@@ -32,7 +32,7 @@ class AIW_Image_Mapper
                 $caption = isset($matches[3]) ? trim((string) $matches[3]) : '';
 
                 $figure = '<figure class="aiw-inline-image wp-block-image size-full">';
-                $figure .= '<img src="' . $url . '" alt="' . $alt . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
+                $figure .= '<img src="' . $url . '" alt="' . $alt . '" style="width:100%;height:auto;display:block;"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
                 if ($caption !== '') {
                     $figure .= '<figcaption>' . esc_html($caption) . '</figcaption>';
                 }

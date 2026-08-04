@@ -627,7 +627,7 @@ class AIW_Wizard_Controller
             'linkDestination' => 'none',
         ]), JSON_UNESCAPED_SLASHES) . ' -->';
         $block .= '<figure class="wp-block-image size-full">';
-        $block .= '<img src="' . esc_url($src) . '" alt="' . esc_attr($alt) . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
+        $block .= '<img src="' . esc_url($src) . '" alt="' . esc_attr($alt) . '" style="width:100%;height:auto;display:block;"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
         if ($caption !== '') {
             $block .= '<figcaption>' . esc_html($caption) . '</figcaption>';
         }
