@@ -139,15 +139,15 @@ class AIW_Wizard_Controller
 
         $operator_user_id = get_current_user_id();
 
-        $working_content = $this->build_restricted_article_body($post_content, $restriction_start, $metadata_warnings);
-
         $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
         $inline_image_ids = $this->upload_multiple_images('aiw_inline_images', $inline_image_count, 0);
         $author_image_id = $this->upload_single_image('aiw_author_image', 0);
 
         $image_map = $this->build_inline_image_map($inline_image_ids);
         $missing_image_slots = [];
-        $working_content = $this->image_mapper->replace_placeholders($working_content, $image_map, $missing_image_slots);
+        $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots);
+
+        $working_content = $this->build_restricted_article_body($content_with_images, $restriction_start, $metadata_warnings);
 
         $stored_author_bio = (string) get_user_meta((int) $attributed_author->ID, 'aiw_author_bio', true);
         $final_author_bio = $submitted_author_bio !== '' ? $submitted_author_bio : $stored_author_bio;
@@ -436,7 +436,7 @@ class AIW_Wizard_Controller
     private function build_restricted_article_body(string $content, string $restriction_start, array &$metadata_warnings): string
     {
         $restriction_start = trim($restriction_start);
-        if (stripos($content, '[RESTRICT]') === false) {
+        if (!$this->contains_restriction_anchor($content)) {
             $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
             if ($restriction_start === '') {
                 return $this->convert_to_block_markup($content);
@@ -489,8 +489,8 @@ class AIW_Wizard_Controller
     private function convert_dom_element_to_blocks_with_restriction(DOMElement $node, string $restriction_start, bool &$anchor_inserted): array
     {
         $inner_html = $this->dom_node_inner_html($node);
-        if (!$anchor_inserted && stripos($inner_html, '[RESTRICT]') !== false) {
-            $parts = preg_split('/\[RESTRICT\]/i', $inner_html, 2);
+        if (!$anchor_inserted && $this->contains_restriction_anchor($inner_html)) {
+            $parts = preg_split('/\[\s*RESTRICT\s*\]/iu', $inner_html, 2);
             $before_html = isset($parts[0]) ? trim((string) $parts[0]) : '';
             $after_html = isset($parts[1]) ? trim((string) $parts[1]) : '';
 
@@ -707,6 +707,11 @@ class AIW_Wizard_Controller
     private function wrap_raw_html_block(string $html): string
     {
         return "<!-- wp:html -->\n" . $html . "\n<!-- /wp:html -->";
+    }
+
+    private function contains_restriction_anchor(string $text): bool
+    {
+        return preg_match('/\[\s*RESTRICT\s*\]/iu', $text) === 1;
     }
 
     private function dom_node_inner_html(DOMNode $node): string

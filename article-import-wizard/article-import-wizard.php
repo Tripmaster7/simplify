@@ -3,7 +3,7 @@
  * Plugin Name: Article Import Wizard
  * Description: Guided article import workflow for non-technical editors with membership-based author attribution.
  * Version: 0.0.1
- * Author: Simplify
+ * Author: GitHub Copilot and Jens
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Text Domain: article-import-wizard

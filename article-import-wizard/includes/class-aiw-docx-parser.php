@@ -277,7 +277,7 @@ class AIW_DOCX_Parser
             }
         }
 
-        if (stripos($text, '[RESTRICT]') !== false) {
+        if (preg_match('/\[\s*RESTRICT\s*\]/iu', $text)) {
             $metadata['restriction_anchor'] = true;
         }
 
