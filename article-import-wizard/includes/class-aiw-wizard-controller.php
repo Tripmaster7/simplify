@@ -584,7 +584,7 @@ class AIW_Wizard_Controller
     {
         $level = max(1, min(6, $level));
 
-        return '<!-- wp:heading {"level":' . $level . '} -->\n<h' . $level . '>' . trim($inner_html) . '</h' . $level . '>\n<!-- /wp:heading -->';
+        return "<!-- wp:heading {\"level\":{$level}} -->\n<h{$level}>" . trim($inner_html) . "</h{$level}>\n<!-- /wp:heading -->";
     }
 
     private function wrap_image_block(DOMElement $node): string
