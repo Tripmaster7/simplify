@@ -52,6 +52,17 @@ if (!defined('ABSPATH')) {
                     <td><?php echo esc_html((string) $preview_data['attributed_author_name']); ?></td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e('Categories', 'article-import-wizard'); ?></th>
+                    <td>
+                        <?php
+                        $preview_category_names = isset($preview_data['category_names']) && is_array($preview_data['category_names'])
+                            ? $preview_data['category_names']
+                            : [];
+                        ?>
+                        <?php echo !empty($preview_category_names) ? esc_html(implode(', ', array_map('strval', $preview_category_names))) : esc_html__('None', 'article-import-wizard'); ?>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e('Title', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['post_title']); ?></td>
                 </tr>
@@ -154,6 +165,21 @@ if (!defined('ABSPATH')) {
                         <td>
                             <input id="aiw_membership_number" name="aiw_membership_number" type="text" class="regular-text" required />
                             <p class="description"><?php esc_html_e('Must match the author username exactly.', 'article-import-wizard'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="aiw_category_ids"><?php esc_html_e('Categories', 'article-import-wizard'); ?></label></th>
+                        <td>
+                            <select id="aiw_category_ids" name="aiw_category_ids[]" multiple size="6" required>
+                                <?php if (isset($available_categories) && is_array($available_categories)) : ?>
+                                    <?php foreach ($available_categories as $category) : ?>
+                                        <?php if (isset($category->term_id, $category->name)) : ?>
+                                            <option value="<?php echo esc_attr((string) $category->term_id); ?>"><?php echo esc_html((string) $category->name); ?></option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <p class="description"><?php esc_html_e('Select at least one category. Multiple categories are allowed.', 'article-import-wizard'); ?></p>
                         </td>
                     </tr>
                     <tr>

@@ -54,6 +54,10 @@ class AIW_Wizard_Controller
         $default_restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
         $default_restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
         $help_url = AIW_PLUGIN_URL . 'docs/editorial-cheat-sheet-print.html';
+        $available_categories = get_categories([
+            'hide_empty' => false,
+            'taxonomy' => 'category',
+        ]);
 
         include AIW_PLUGIN_DIR . 'templates/wizard-step-upload.php';
     }
@@ -98,8 +102,14 @@ class AIW_Wizard_Controller
             ? sanitize_textarea_field(wp_unslash($_POST['aiw_author_bio']))
             : '';
 
+        $category_ids = $this->extract_category_ids_from_post();
+
         if ($membership_number === '') {
             $this->redirect_with_error(__('Membership number is required.', 'article-import-wizard'));
+        }
+
+        if (empty($category_ids)) {
+            $this->redirect_with_error(__('Please select at least one category.', 'article-import-wizard'));
         }
 
         $attributed_author = $this->author_service->find_by_membership_number($membership_number);
@@ -213,6 +223,8 @@ class AIW_Wizard_Controller
             'final_author_image_id' => (int) $final_author_image_id,
             'submitted_author_bio' => $submitted_author_bio,
             'final_author_bio' => $final_author_bio,
+            'category_ids' => $category_ids,
+            'category_names' => $this->resolve_category_names($category_ids),
             'validation_report' => $validation_report,
             'invalid_links_count' => count($link_validation['invalid']),
             'metadata_warnings' => $metadata_warnings,
@@ -249,6 +261,15 @@ class AIW_Wizard_Controller
         $operator_user_id = get_current_user_id();
 
         $attributed_author_user_id = isset($preview['attributed_author_user_id']) ? (int) $preview['attributed_author_user_id'] : 0;
+        $category_ids = isset($preview['category_ids']) && is_array($preview['category_ids'])
+            ? array_values(array_filter(array_map('intval', $preview['category_ids']), static function (int $id): bool {
+                return $id > 0;
+            }))
+            : [];
+
+        if (empty($category_ids)) {
+            $this->redirect_with_error(__('At least one category is required. Please generate preview again.', 'article-import-wizard'));
+        }
 
         $post_id = wp_insert_post([
             'post_type' => 'post',
@@ -256,6 +277,7 @@ class AIW_Wizard_Controller
             'post_title' => (string) $preview['post_title'],
             'post_content' => (string) $preview['working_content'],
             'post_author' => $attributed_author_user_id > 0 ? $attributed_author_user_id : $operator_user_id,
+            'post_category' => $category_ids,
         ], true);
 
         if (is_wp_error($post_id)) {
@@ -313,6 +335,7 @@ class AIW_Wizard_Controller
         update_post_meta($post_id, '_aiw_validation_report', wp_json_encode($validation_report));
         update_post_meta($post_id, '_aiw_restriction_shortcode_start', isset($preview['restriction_start']) ? (string) $preview['restriction_start'] : '');
         update_post_meta($post_id, '_aiw_restriction_shortcode_end', isset($preview['restriction_end']) ? (string) $preview['restriction_end'] : '');
+        update_post_meta($post_id, '_aiw_category_ids', $category_ids);
 
         $notify_email = AIW_Settings::get_option_string(AIW_Settings::OPTION_NOTIFY_EMAIL, get_option('admin_email', ''));
         $this->notifier->send_import_complete_email($post_id, $notify_email, [
@@ -966,6 +989,47 @@ class AIW_Wizard_Controller
     private function preview_transient_key(string $token): string
     {
         return 'aiw_preview_' . get_current_user_id() . '_' . $token;
+    }
+
+    private function extract_category_ids_from_post(): array
+    {
+        if (!isset($_POST['aiw_category_ids'])) {
+            return [];
+        }
+
+        $raw = wp_unslash($_POST['aiw_category_ids']);
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $category_ids = [];
+        foreach ($raw as $value) {
+            $category_id = (int) $value;
+            if ($category_id <= 0) {
+                continue;
+            }
+
+            if (!term_exists($category_id, 'category')) {
+                continue;
+            }
+
+            $category_ids[] = $category_id;
+        }
+
+        return array_values(array_unique($category_ids));
+    }
+
+    private function resolve_category_names(array $category_ids): array
+    {
+        $names = [];
+        foreach ($category_ids as $category_id) {
+            $term = get_term((int) $category_id, 'category');
+            if ($term && !is_wp_error($term) && isset($term->name)) {
+                $names[] = (string) $term->name;
+            }
+        }
+
+        return $names;
     }
 
     private function store_preview_data(string $token, array $payload): void
