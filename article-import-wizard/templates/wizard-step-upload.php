@@ -186,8 +186,11 @@ if (!defined('ABSPATH')) {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="aiw_inline_images"><?php esc_html_e('Inline Pictures', 'article-import-wizard'); ?></label></th>
-                        <td><input id="aiw_inline_images" name="aiw_inline_images[]" type="file" accept="image/*" multiple /></td>
+                        <th scope="row"><?php esc_html_e('Inline Pictures', 'article-import-wizard'); ?></th>
+                        <td>
+                            <div id="aiw-inline-image-inputs"></div>
+                            <p class="description"><?php esc_html_e('One upload field is generated for each selected picture slot.', 'article-import-wizard'); ?></p>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="aiw_author_bio"><?php esc_html_e('Author Bio', 'article-import-wizard'); ?></label></th>
@@ -213,6 +216,52 @@ if (!defined('ABSPATH')) {
 
                 <?php submit_button(__('Generate Preview', 'article-import-wizard')); ?>
             </form>
+
+            <script>
+                (function () {
+                    var countInput = document.getElementById('aiw_inline_image_count');
+                    var container = document.getElementById('aiw-inline-image-inputs');
+
+                    if (!countInput || !container) {
+                        return;
+                    }
+
+                    function renderInlineImageInputs() {
+                        var count = parseInt(countInput.value || '0', 10);
+                        if (isNaN(count) || count < 0) {
+                            count = 0;
+                        }
+                        if (count > 20) {
+                            count = 20;
+                        }
+
+                        container.innerHTML = '';
+
+                        for (var i = 1; i <= count; i++) {
+                            var wrapper = document.createElement('div');
+                            wrapper.className = 'aiw-inline-upload-row';
+
+                            var label = document.createElement('label');
+                            label.setAttribute('for', 'aiw_inline_image_' + i);
+                            label.textContent = '<?php echo esc_js(__('Picture Slot', 'article-import-wizard')); ?> ' + i;
+
+                            var input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.id = 'aiw_inline_image_' + i;
+                            input.name = 'aiw_inline_image_' + i;
+
+                            wrapper.appendChild(label);
+                            wrapper.appendChild(input);
+                            container.appendChild(wrapper);
+                        }
+                    }
+
+                    countInput.addEventListener('input', renderInlineImageInputs);
+                    countInput.addEventListener('change', renderInlineImageInputs);
+                    renderInlineImageInputs();
+                })();
+            </script>
         </div>
     <?php endif; ?>
 </div>

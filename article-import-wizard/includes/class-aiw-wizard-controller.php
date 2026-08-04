@@ -140,12 +140,13 @@ class AIW_Wizard_Controller
         $operator_user_id = get_current_user_id();
 
         $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
-        $inline_image_ids = $this->upload_multiple_images('aiw_inline_images', $inline_image_count, 0);
+        $inline_image_ids = $this->upload_inline_images($inline_image_count, 0);
         $author_image_id = $this->upload_single_image('aiw_author_image', 0);
 
         $image_map = $this->build_inline_image_map($inline_image_ids);
         $missing_image_slots = [];
         $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots);
+        $content_with_images = $this->normalize_inline_figure_markup($content_with_images);
 
         $working_content = $this->build_restricted_article_body($content_with_images, $restriction_start, $metadata_warnings);
 
@@ -795,6 +796,28 @@ class AIW_Wizard_Controller
         return (int) $attachment_id;
     }
 
+    private function upload_inline_images(int $limit, int $post_id): array
+    {
+        if ($limit <= 0) {
+            return [];
+        }
+
+        $attachment_ids = [];
+        for ($slot = 1; $slot <= $limit; $slot++) {
+            $attachment_id = $this->upload_single_image('aiw_inline_image_' . $slot, $post_id);
+            if ($attachment_id > 0) {
+                $attachment_ids[] = $attachment_id;
+            }
+        }
+
+        if (!empty($attachment_ids)) {
+            return $attachment_ids;
+        }
+
+        // Backward compatibility for legacy multi-upload input.
+        return $this->upload_multiple_images('aiw_inline_images', $limit, $post_id);
+    }
+
     private function upload_multiple_images(string $field_name, int $limit, int $post_id): array
     {
         if ($limit <= 0 || !isset($_FILES[$field_name]) || !is_array($_FILES[$field_name]['name'])) {
@@ -872,6 +895,53 @@ class AIW_Wizard_Controller
         }
 
         return array_values(array_unique($links));
+    }
+
+    private function normalize_inline_figure_markup(string $content): string
+    {
+        if ($content === '') {
+            return $content;
+        }
+
+        $pattern = '/<p>(.*?)((?:\s*<figure\b[^>]*>.*?<\/figure>\s*)+)(.*?)<\/p>/is';
+        $previous = null;
+
+        while ($previous !== $content) {
+            $previous = $content;
+
+            $content = preg_replace_callback(
+                $pattern,
+                static function (array $matches): string {
+                    $before = trim((string) ($matches[1] ?? ''));
+                    $figures_group = (string) ($matches[2] ?? '');
+                    $after = trim((string) ($matches[3] ?? ''));
+
+                    $parts = [];
+                    if ($before !== '') {
+                        $parts[] = '<p>' . $before . '</p>';
+                    }
+
+                    if (preg_match_all('/<figure\b[^>]*>.*?<\/figure>/is', $figures_group, $figure_matches) && !empty($figure_matches[0])) {
+                        foreach ($figure_matches[0] as $figure_html) {
+                            $parts[] = trim((string) $figure_html);
+                        }
+                    }
+
+                    if ($after !== '') {
+                        $parts[] = '<p>' . $after . '</p>';
+                    }
+
+                    return implode("\n", $parts);
+                },
+                $content
+            );
+
+            if (!is_string($content)) {
+                return $previous;
+            }
+        }
+
+        return $content;
     }
 
     private function replace_invalid_links_in_content(string $content, array $invalid_urls): string

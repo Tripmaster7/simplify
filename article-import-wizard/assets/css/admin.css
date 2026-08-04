@@ -52,9 +52,19 @@
 }
 
 .aiw-preview-content img {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: auto;
     display: block;
+}
+
+.aiw-inline-upload-row {
+    margin-bottom: 8px;
+}
+
+.aiw-inline-upload-row label {
+    display: inline-block;
+    min-width: 120px;
 }
 
 .aiw-list {
