@@ -2,18 +2,19 @@
 /**
  * Plugin Name: Article Import Wizard
  * Description: Guided article import workflow for non-technical editors with membership-based author attribution.
- * Version: 0.0.12
+ * Version: 0.0.13
  * Author: GitHub Copilot and Jens
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Text Domain: article-import-wizard
+ * Domain Path: /languages
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AIW_PLUGIN_VERSION', '0.0.12');
+define('AIW_PLUGIN_VERSION', '0.0.13');
 define('AIW_PLUGIN_FILE', __FILE__);
 define('AIW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIW_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -32,6 +33,12 @@ require_once AIW_PLUGIN_DIR . 'includes/class-aiw-settings.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-admin-i18n.php';
 
 add_action('plugins_loaded', static function () {
+    load_plugin_textdomain(
+        'article-import-wizard',
+        false,
+        dirname(plugin_basename(__FILE__)) . '/languages'
+    );
+
     $author_service = new AIW_Author_Service();
     $docx_parser = new AIW_DOCX_Parser();
     $image_mapper = new AIW_Image_Mapper();

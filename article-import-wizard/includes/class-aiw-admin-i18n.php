@@ -98,6 +98,11 @@ class AIW_Admin_I18n
             return $translation;
         }
 
+        // Keep this only as a fallback when no .mo translation exists yet.
+        if ($translation !== $text) {
+            return $translation;
+        }
+
         if (isset($this->de_translations[$text])) {
             return $this->de_translations[$text];
         }
@@ -108,6 +113,11 @@ class AIW_Admin_I18n
     private function is_german_admin_context(): bool
     {
         if (!is_admin()) {
+            return false;
+        }
+
+        $page = isset($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
+        if ($page !== 'aiw-import-wizard' && $page !== 'aiw-settings') {
             return false;
         }
 
