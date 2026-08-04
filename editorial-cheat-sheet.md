@@ -30,6 +30,9 @@ Required or strongly recommended:
 Optional:
 - [AUTHOR_NAME: First Last]
 - [BIO: Short author bio text]
+- [RESTRICT]
+
+Legacy compatibility only:
 - [RESTRICT_START]
 - [RESTRICT_END]
 
@@ -53,7 +56,7 @@ Copy this block into a new Word document and fill it in.
 [AUTHOR_MEMBERSHIP: ]
 [AUTHOR_NAME: ]
 
-[RESTRICT_START]
+[RESTRICT]
 
 First paragraph...
 
@@ -61,7 +64,7 @@ Second paragraph with image marker [Bild 1: Caption].
 
 Another paragraph with [Bild 2].
 
-[RESTRICT_END]
+[RESTRICT_END]  (legacy fallback only; the wizard normally adds the closing shortcode before the bio)
 
 [BIO: ]
 

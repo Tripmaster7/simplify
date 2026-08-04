@@ -68,6 +68,9 @@ if (!defined('ABSPATH')) {
             $missing_slots = isset($preview_data['validation_report']['missing_image_slots']) && is_array($preview_data['validation_report']['missing_image_slots'])
                 ? $preview_data['validation_report']['missing_image_slots']
                 : [];
+            $metadata_warnings = isset($preview_data['validation_report']['metadata_warnings']) && is_array($preview_data['validation_report']['metadata_warnings'])
+                ? $preview_data['validation_report']['metadata_warnings']
+                : [];
             ?>
             <p>
                 <strong><?php esc_html_e('Invalid Links:', 'article-import-wizard'); ?></strong>
@@ -91,6 +94,11 @@ if (!defined('ABSPATH')) {
             <p>
                 <strong><?php esc_html_e('Missing Image Slots:', 'article-import-wizard'); ?></strong>
                 <?php echo !empty($missing_slots) ? esc_html(implode(', ', array_map('strval', $missing_slots))) : esc_html__('None', 'article-import-wizard'); ?>
+            </p>
+
+            <p>
+                <strong><?php esc_html_e('Metadata Warnings:', 'article-import-wizard'); ?></strong>
+                <?php echo !empty($metadata_warnings) ? esc_html(implode(' | ', array_map('strval', $metadata_warnings))) : esc_html__('None', 'article-import-wizard'); ?>
             </p>
 
             <h3><?php esc_html_e('Generated Content Preview', 'article-import-wizard'); ?></h3>

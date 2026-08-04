@@ -111,6 +111,10 @@ class AIW_Wizard_Controller
             $metadata_warnings[] = __('DOCX membership number does not match the wizard membership number.', 'article-import-wizard');
         }
 
+        if (empty($doc_metadata['restriction_anchor'])) {
+            $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
+        }
+
         if ($post_title === '' && !empty($doc_parse['title'])) {
             $post_title = sanitize_text_field((string) $doc_parse['title']);
         }
@@ -128,7 +132,7 @@ class AIW_Wizard_Controller
 
         $operator_user_id = get_current_user_id();
 
-        $working_content = $this->apply_restriction_markers($post_content, $restriction_start, $restriction_end);
+        $working_content = $this->apply_restriction_anchor($post_content, $restriction_start);
 
         $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
         $inline_image_ids = $this->upload_multiple_images('aiw_inline_images', $inline_image_count, 0);
@@ -148,7 +152,8 @@ class AIW_Wizard_Controller
             $working_content,
             (string) $attributed_author->display_name,
             $final_author_bio,
-            $final_author_image_id
+            $final_author_image_id,
+            $restriction_end
         );
 
         $links = $this->extract_links_from_content($working_content);
@@ -370,8 +375,9 @@ class AIW_Wizard_Controller
         ];
     }
 
-    private function append_bio_box_from_data(string $content, string $display_name, string $bio, int $image_id): string
+    private function append_bio_box_from_data(string $content, string $display_name, string $bio, int $image_id, string $restriction_end): string
     {
+        $restriction_end = trim($restriction_end);
         $image_html = '';
         if ($image_id > 0) {
             $candidate = wp_get_attachment_image($image_id, 'thumbnail', false, ['class' => 'aiw-bio-box__image']);
@@ -392,29 +398,32 @@ class AIW_Wizard_Controller
         }
         $bio_html .= '</div></div>';
 
-        if ($content === '') {
-            return $bio_html;
+        $restriction_end_markup = '';
+        if ($restriction_end !== '') {
+            $restriction_end_markup = "<!-- wp:shortcode -->\n" . $restriction_end . "\n<!-- /wp:shortcode -->\n\n";
         }
 
-        return $content . "\n\n" . $bio_html;
+        if ($content === '') {
+            return $restriction_end_markup . $bio_html;
+        }
+
+        return $content . "\n\n" . $restriction_end_markup . $bio_html;
     }
 
-    private function apply_restriction_markers(string $content, string $restriction_start, string $restriction_end): string
+    private function apply_restriction_anchor(string $content, string $restriction_start): string
     {
         $restriction_start = trim($restriction_start);
-        $restriction_end = trim($restriction_end);
 
-        if ($restriction_start === '' || $restriction_end === '') {
+        if ($restriction_start === '') {
             return $content;
         }
 
-        if (stripos($content, '[RESTRICT_START]') !== false || stripos($content, '[RESTRICT_END]') !== false) {
-            $content = str_ireplace('[RESTRICT_START]', $restriction_start, $content);
-            $content = str_ireplace('[RESTRICT_END]', $restriction_end, $content);
-            return $content;
+        if (stripos($content, '[RESTRICT]') !== false) {
+            $replacement = "\n\n<!-- wp:shortcode -->\n" . $restriction_start . "\n<!-- /wp:shortcode -->\n\n";
+            return str_ireplace('[RESTRICT]', $replacement, $content);
         }
 
-        return $restriction_start . "\n" . $content . "\n" . $restriction_end;
+        return $content;
     }
 
     private function convert_to_block_markup(string $content): string
@@ -430,6 +439,16 @@ class AIW_Wizard_Controller
         foreach ($segments as $segment) {
             $segment = trim((string) $segment);
             if ($segment === '') {
+                continue;
+            }
+
+            if (preg_match('/^<!--\s*wp:[a-z0-9_-]+\s*-->.*<!--\s*\/wp:[a-z0-9_-]+\s*-->$/is', $segment)) {
+                $blocks[] = $segment;
+                continue;
+            }
+
+            if (preg_match('/^<!--\s*wp:shortcode\s*-->.*<!--\s*\/wp:shortcode\s*-->$/is', $segment)) {
+                $blocks[] = $segment;
                 continue;
             }
 

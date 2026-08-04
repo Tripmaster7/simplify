@@ -273,6 +273,10 @@ class AIW_DOCX_Parser
             }
         }
 
+        if (stripos($text, '[RESTRICT]') !== false) {
+            $metadata['restriction_anchor'] = true;
+        }
+
         if (preg_match('/\[(RESTRICT_START|RESTRICT_END)\]/i', $text)) {
             if (!isset($metadata['restriction_flags'])) {
                 $metadata['restriction_flags'] = [];
@@ -284,6 +288,8 @@ class AIW_DOCX_Parser
             if (stripos($text, '[RESTRICT_END]') !== false) {
                 $metadata['restriction_flags'][] = 'RESTRICT_END';
             }
+
+            $text = str_ireplace(['[RESTRICT_START]', '[RESTRICT_END]'], '', $text);
         }
 
         return $text;

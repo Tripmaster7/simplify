@@ -166,8 +166,8 @@
           <li>[AUTHOR_MEMBERSHIP: 123456]</li>
           <li>[AUTHOR_NAME: First Last] (optional)</li>
           <li>[BIO: Short author bio] (optional)</li>
-          <li>[RESTRICT_START] (optional)</li>
-          <li>[RESTRICT_END] (optional)</li>
+          <li>[RESTRICT] (anchor for restricted section)</li>
+          <li>[RESTRICT_START] / [RESTRICT_END] (legacy fallback only)</li>
         </ul>
       </article>
 
@@ -193,13 +193,13 @@
 [AUTHOR_MEMBERSHIP: ]
 [AUTHOR_NAME: ]
 
-[RESTRICT_START]
+[RESTRICT]
 
 First paragraph...
 Second paragraph with [Bild 1: Caption].
 Third paragraph with [Bild 2].
 
-[RESTRICT_END]
+[RESTRICT_END]  (legacy fallback only; the wizard inserts the closing shortcode before the bio)
 
 [BIO: ]</div>
       </article>

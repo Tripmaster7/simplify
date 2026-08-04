@@ -94,7 +94,8 @@ Username itself is the membership number (no extra field required unless future 
 - Save updates back to resolved author user meta
 
 ### Step 5: Build Content
-- Insert restriction shortcode start/end in configured positions
+- Insert the configured restriction start shortcode at the [RESTRICT] anchor in the DOCX
+- Insert the configured restriction end shortcode immediately before the bio box
 - Replace image hints like [Bild 1: Beschreibung] with uploaded image blocks
 - Append public bio box
 
@@ -191,9 +192,12 @@ Recommended tag syntax:
 - [AUTHOR_MEMBERSHIP: 123456]
 - [AUTHOR_NAME: Max Mustermann]
 - [WRITING_DATE: 2026-08-04]
+- [RESTRICT]
+- [BIO: Short author bio text]
+
+Legacy compatibility:
 - [RESTRICT_START]
 - [RESTRICT_END]
-- [BIO: Short author bio text]
 
 Supported aliases (optional):
 - TITLE: HEADLINE, H1
@@ -205,7 +209,8 @@ Parsing behavior:
 - Case-insensitive tag names
 - First valid occurrence wins
 - Value tags use [TAG: value]
-- Flag tags use [TAG] (for example [RESTRICT_START])
+- Anchor tags use [TAG] (for example [RESTRICT])
+- Legacy flag tags are accepted for backward compatibility only
 - Unknown tags are ignored
 - Metadata tags are removed from final article body after parsing
 
@@ -220,7 +225,8 @@ Regex suggestion:
 
 Metadata regex suggestions:
 - Value tags: /\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]/i
-- Flag tags: /\[(RESTRICT_START|RESTRICT_END)\]/i
+- Anchor tags: /\[(RESTRICT)\]/i
+- Legacy flag tags: /\[(RESTRICT_START|RESTRICT_END)\]/i
 
 Replacement logic:
 - Parse marker number N
