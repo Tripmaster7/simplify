@@ -182,8 +182,6 @@ class AIW_Wizard_Controller
             $working_content = $this->replace_invalid_links_in_content($working_content, $invalid_urls);
         }
 
-        $working_content = $this->convert_to_block_markup($working_content);
-
         $source_filename = isset($_FILES['aiw_docx_file']['name'])
             ? sanitize_file_name(wp_unslash($_FILES['aiw_docx_file']['name']))
             : '';
@@ -405,16 +403,26 @@ class AIW_Wizard_Controller
         }
         $bio_html .= '</div></div>';
 
+        $bio_block = $this->wrap_raw_html_block($bio_html);
+
         $restriction_end_markup = '';
         if ($restriction_end !== '') {
-            $restriction_end_markup = "<!-- wp:shortcode -->\n" . $restriction_end . "\n<!-- /wp:shortcode -->\n\n";
+            $restriction_end_markup = $this->wrap_shortcode_block($restriction_end);
         }
 
         if ($content === '') {
-            return $restriction_end_markup . $bio_html;
+            if ($restriction_end_markup !== '') {
+                return $restriction_end_markup . "\n\n" . $bio_block;
+            }
+
+            return $bio_block;
         }
 
-        return $content . "\n\n" . $restriction_end_markup . $bio_html;
+        if ($restriction_end_markup !== '') {
+            return $content . "\n\n" . $restriction_end_markup . "\n\n" . $bio_block;
+        }
+
+        return $content . "\n\n" . $bio_block;
     }
 
     private function apply_restriction_anchor(string $content, string $restriction_start): string
@@ -695,7 +703,7 @@ class AIW_Wizard_Controller
             'linkDestination' => 'none',
         ]), JSON_UNESCAPED_SLASHES) . ' -->';
         $block .= '<figure class="wp-block-image size-full">';
-        $block .= '<img src="' . esc_url($src) . '" alt="' . esc_attr($alt) . '" style="width:100%;height:auto;display:block;"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
+        $block .= '<img src="' . esc_url($src) . '" alt="' . esc_attr($alt) . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
         if ($caption !== '') {
             $block .= '<figcaption>' . esc_html($caption) . '</figcaption>';
         }
