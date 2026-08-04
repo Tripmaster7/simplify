@@ -132,7 +132,7 @@ class AIW_Wizard_Controller
 
         $operator_user_id = get_current_user_id();
 
-        $working_content = $this->apply_restriction_anchor($post_content, $restriction_start);
+        $working_content = $this->build_restricted_article_body($post_content, $restriction_start, $metadata_warnings);
 
         $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
         $inline_image_ids = $this->upload_multiple_images('aiw_inline_images', $inline_image_count, 0);
@@ -424,6 +424,53 @@ class AIW_Wizard_Controller
         }
 
         return $content;
+    }
+
+    private function build_restricted_article_body(string $content, string $restriction_start, array &$metadata_warnings): string
+    {
+        $restriction_start = trim($restriction_start);
+        $anchor = '[RESTRICT]';
+
+        if (stripos($content, $anchor) === false) {
+            $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
+            if ($restriction_start === '') {
+                return $this->convert_to_block_markup($content);
+            }
+
+            return $this->wrap_shortcode_block($restriction_start) . "\n\n" . $this->convert_to_block_markup($content);
+        }
+
+        $parts = explode($anchor, $content, 2);
+        $before = isset($parts[0]) ? (string) $parts[0] : '';
+        $after = isset($parts[1]) ? (string) $parts[1] : '';
+
+        $blocks = [];
+
+        $before_blocks = trim($this->convert_to_block_markup($before));
+        if ($before_blocks !== '') {
+            $blocks[] = $before_blocks;
+        }
+
+        if ($restriction_start !== '') {
+            $blocks[] = $this->wrap_shortcode_block($restriction_start);
+        }
+
+        $after_blocks = trim($this->convert_to_block_markup($after));
+        if ($after_blocks !== '') {
+            $blocks[] = $after_blocks;
+        }
+
+        return implode("\n\n", $blocks);
+    }
+
+    private function wrap_shortcode_block(string $shortcode): string
+    {
+        $shortcode = trim($shortcode);
+        if ($shortcode === '') {
+            return '';
+        }
+
+        return "<!-- wp:shortcode -->\n" . $shortcode . "\n<!-- /wp:shortcode -->";
     }
 
     private function convert_to_block_markup(string $content): string
