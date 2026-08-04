@@ -436,9 +436,7 @@ class AIW_Wizard_Controller
     private function build_restricted_article_body(string $content, string $restriction_start, array &$metadata_warnings): string
     {
         $restriction_start = trim($restriction_start);
-        $anchor = '[RESTRICT]';
-
-        if (stripos($content, $anchor) === false) {
+        if (stripos($content, '[RESTRICT]') === false) {
             $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
             if ($restriction_start === '') {
                 return $this->convert_to_block_markup($content);
@@ -447,27 +445,97 @@ class AIW_Wizard_Controller
             return $this->wrap_shortcode_block($restriction_start) . "\n\n" . $this->convert_to_block_markup($content);
         }
 
-        $parts = explode($anchor, $content, 2);
-        $before = isset($parts[0]) ? (string) $parts[0] : '';
-        $after = isset($parts[1]) ? (string) $parts[1] : '';
+        $document = new DOMDocument('1.0', 'UTF-8');
+        libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="utf-8" ?><div id="aiw-root">' . $content . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $root = $document->getElementById('aiw-root');
+        if (!$root instanceof DOMElement) {
+            return $this->convert_to_block_markup($content);
+        }
 
         $blocks = [];
+        $anchor_inserted = false;
 
-        $before_blocks = trim($this->convert_to_block_markup($before));
-        if ($before_blocks !== '') {
-            $blocks[] = $before_blocks;
+        foreach (iterator_to_array($root->childNodes) as $node) {
+            if ($node instanceof DOMText && trim($node->wholeText) === '') {
+                continue;
+            }
+
+            if ($node instanceof DOMElement) {
+                $segments = $this->convert_dom_element_to_blocks_with_restriction($node, $restriction_start, $anchor_inserted);
+                $blocks = array_merge($blocks, $segments);
+                continue;
+            }
+
+            if ($node instanceof DOMComment) {
+                $comment = trim($node->nodeValue);
+                if ($comment !== '') {
+                    $blocks[] = '<!-- ' . $comment . ' -->';
+                }
+            }
         }
 
-        if ($restriction_start !== '') {
-            $blocks[] = $this->wrap_shortcode_block($restriction_start);
-        }
-
-        $after_blocks = trim($this->convert_to_block_markup($after));
-        if ($after_blocks !== '') {
-            $blocks[] = $after_blocks;
+        if (!$anchor_inserted) {
+            if ($restriction_start !== '') {
+                array_unshift($blocks, $this->wrap_shortcode_block($restriction_start));
+            }
         }
 
         return implode("\n\n", $blocks);
+    }
+
+    private function convert_dom_element_to_blocks_with_restriction(DOMElement $node, string $restriction_start, bool &$anchor_inserted): array
+    {
+        $inner_html = $this->dom_node_inner_html($node);
+        if (!$anchor_inserted && stripos($inner_html, '[RESTRICT]') !== false) {
+            $parts = preg_split('/\[RESTRICT\]/i', $inner_html, 2);
+            $before_html = isset($parts[0]) ? trim((string) $parts[0]) : '';
+            $after_html = isset($parts[1]) ? trim((string) $parts[1]) : '';
+
+            $blocks = [];
+            if ($before_html !== '') {
+                $blocks = array_merge($blocks, $this->convert_dom_element_to_blocks_from_html($node->tagName, $before_html, $node));
+            }
+
+            if ($restriction_start !== '') {
+                $blocks[] = $this->wrap_shortcode_block($restriction_start);
+            }
+
+            if ($after_html !== '') {
+                $blocks = array_merge($blocks, $this->convert_dom_element_to_blocks_from_html($node->tagName, $after_html, $node));
+            }
+
+            $anchor_inserted = true;
+
+            return $blocks;
+        }
+
+        return $this->convert_dom_element_to_blocks($node);
+    }
+
+    private function convert_dom_element_to_blocks_from_html(string $tag_name, string $inner_html, DOMElement $template_node): array
+    {
+        $tag = strtolower($tag_name);
+        $inner_html = trim($inner_html);
+        if ($inner_html === '') {
+            return [];
+        }
+
+        if ($tag === 'p') {
+            return [$this->wrap_paragraph_block($inner_html)];
+        }
+
+        if ($tag === 'h1' || $tag === 'h2' || $tag === 'h3' || $tag === 'h4' || $tag === 'h5' || $tag === 'h6') {
+            return [$this->wrap_heading_block((int) substr($tag, 1), $inner_html)];
+        }
+
+        if ($tag === 'figure' || strpos((string) $template_node->getAttribute('class'), 'wp-block-image') !== false) {
+            return [$this->wrap_image_block($template_node)];
+        }
+
+        return [$this->wrap_raw_html_block($inner_html)];
     }
 
     private function wrap_shortcode_block(string $shortcode): string
@@ -634,6 +702,11 @@ class AIW_Wizard_Controller
         $block .= '</figure><!-- /wp:image -->';
 
         return $block;
+    }
+
+    private function wrap_raw_html_block(string $html): string
+    {
+        return "<!-- wp:html -->\n" . $html . "\n<!-- /wp:html -->";
     }
 
     private function dom_node_inner_html(DOMNode $node): string
