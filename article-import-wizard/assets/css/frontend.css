@@ -1,0 +1,31 @@
+.aiw-bio-box {
+    margin-top: 28px;
+    padding: 14px;
+    border: 1px solid #dcdcde;
+    background: #f9f9f9;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.aiw-bio-box__image {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+.aiw-bio-box__name {
+    margin: 0 0 6px;
+}
+
+.aiw-bio-box__text {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .aiw-bio-box {
+        flex-direction: column;
+    }
+}

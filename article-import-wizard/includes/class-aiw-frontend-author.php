@@ -8,9 +8,33 @@ class AIW_Frontend_Author
 {
     public function register(): void
     {
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_styles']);
         add_filter('the_author', [$this, 'filter_author_name']);
         add_filter('get_the_author_display_name', [$this, 'filter_author_name']);
         add_filter('author_link', [$this, 'filter_author_link']);
+    }
+
+    public function enqueue_frontend_styles(): void
+    {
+        if (is_admin() || !is_singular()) {
+            return;
+        }
+
+        $post_id = get_queried_object_id();
+        if ($post_id <= 0) {
+            return;
+        }
+
+        if ((int) get_post_meta($post_id, '_aiw_imported', true) !== 1) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'aiw-frontend-css',
+            AIW_PLUGIN_URL . 'assets/css/frontend.css',
+            [],
+            AIW_PLUGIN_VERSION
+        );
     }
 
     public function filter_author_name(string $display_name): string
