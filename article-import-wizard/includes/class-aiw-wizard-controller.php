@@ -58,6 +58,7 @@ class AIW_Wizard_Controller
             'hide_empty' => false,
             'taxonomy' => 'category',
         ]);
+        $can_create_categories = current_user_can('manage_categories');
 
         include AIW_PLUGIN_DIR . 'templates/wizard-step-upload.php';
     }
@@ -103,6 +104,19 @@ class AIW_Wizard_Controller
             : '';
 
         $category_ids = $this->extract_category_ids_from_post();
+        $new_category_names = $this->extract_new_category_names_from_post();
+        if (!empty($new_category_names)) {
+            if (!current_user_can('manage_categories')) {
+                $this->redirect_with_error(__('You do not have permission to create categories.', 'article-import-wizard'));
+            }
+
+            $created_category_ids = $this->create_categories_from_names($new_category_names);
+            if (is_wp_error($created_category_ids)) {
+                $this->redirect_with_error($created_category_ids->get_error_message());
+            }
+
+            $category_ids = array_values(array_unique(array_merge($category_ids, $created_category_ids)));
+        }
 
         if ($membership_number === '') {
             $this->redirect_with_error(__('Membership number is required.', 'article-import-wizard'));
@@ -1017,6 +1031,61 @@ class AIW_Wizard_Controller
         }
 
         return array_values(array_unique($category_ids));
+    }
+
+    private function extract_new_category_names_from_post(): array
+    {
+        if (!isset($_POST['aiw_new_category_names'])) {
+            return [];
+        }
+
+        $raw = wp_unslash($_POST['aiw_new_category_names']);
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($raw as $value) {
+            $name = sanitize_text_field((string) $value);
+            if ($name === '') {
+                continue;
+            }
+
+            $names[] = $name;
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    private function create_categories_from_names(array $names)
+    {
+        $created_ids = [];
+
+        foreach ($names as $name) {
+            $existing = term_exists($name, 'category');
+            if (is_array($existing) && isset($existing['term_id'])) {
+                $created_ids[] = (int) $existing['term_id'];
+                continue;
+            }
+
+            if (is_int($existing)) {
+                $created_ids[] = $existing;
+                continue;
+            }
+
+            $insert = wp_insert_term($name, 'category');
+            if (is_wp_error($insert)) {
+                return $insert;
+            }
+
+            if (is_array($insert) && isset($insert['term_id'])) {
+                $created_ids[] = (int) $insert['term_id'];
+            }
+        }
+
+        return array_values(array_unique(array_filter($created_ids, static function (int $id): bool {
+            return $id > 0;
+        })));
     }
 
     private function resolve_category_names(array $category_ids): array

@@ -179,6 +179,12 @@ if (!defined('ABSPATH')) {
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
+                            <?php if (!empty($can_create_categories)) : ?>
+                                <p>
+                                    <button type="button" class="button" id="aiw-add-category-button"><?php esc_html_e('New Category', 'article-import-wizard'); ?></button>
+                                </p>
+                                <div id="aiw-new-category-inputs"></div>
+                            <?php endif; ?>
                             <p class="description"><?php esc_html_e('Select at least one category. Multiple categories are allowed.', 'article-import-wizard'); ?></p>
                         </td>
                     </tr>
@@ -250,6 +256,10 @@ if (!defined('ABSPATH')) {
                 (function () {
                     var countInput = document.getElementById('aiw_inline_image_count');
                     var container = document.getElementById('aiw-inline-image-inputs');
+                    var addCategoryButton = document.getElementById('aiw-add-category-button');
+                    var categoriesSelect = document.getElementById('aiw_category_ids');
+                    var newCategoryInputs = document.getElementById('aiw-new-category-inputs');
+                    var newCategoryCounter = 0;
 
                     if (!countInput || !container) {
                         return;
@@ -289,6 +299,41 @@ if (!defined('ABSPATH')) {
                     countInput.addEventListener('input', renderInlineImageInputs);
                     countInput.addEventListener('change', renderInlineImageInputs);
                     renderInlineImageInputs();
+
+                    if (addCategoryButton && categoriesSelect && newCategoryInputs) {
+                        addCategoryButton.addEventListener('click', function () {
+                            var categoryName = window.prompt('<?php echo esc_js(__('Enter new category name', 'article-import-wizard')); ?>');
+                            if (!categoryName) {
+                                return;
+                            }
+
+                            categoryName = categoryName.trim();
+                            if (!categoryName) {
+                                return;
+                            }
+
+                            for (var i = 0; i < categoriesSelect.options.length; i++) {
+                                if ((categoriesSelect.options[i].textContent || '').toLowerCase() === categoryName.toLowerCase()) {
+                                    categoriesSelect.options[i].selected = true;
+                                    return;
+                                }
+                            }
+
+                            newCategoryCounter += 1;
+
+                            var option = document.createElement('option');
+                            option.value = '__new__' + newCategoryCounter;
+                            option.textContent = categoryName + ' (new)';
+                            option.selected = true;
+                            categoriesSelect.appendChild(option);
+
+                            var hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = 'aiw_new_category_names[]';
+                            hidden.value = categoryName;
+                            newCategoryInputs.appendChild(hidden);
+                        });
+                    }
                 })();
             </script>
         </div>
