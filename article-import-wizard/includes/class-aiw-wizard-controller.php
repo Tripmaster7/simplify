@@ -51,6 +51,8 @@ class AIW_Wizard_Controller
 
         $default_inline_slots = AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
         $default_broken_link_mode = AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
+        $default_restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
+        $default_restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
 
         include AIW_PLUGIN_DIR . 'templates/wizard-step-upload.php';
     }
@@ -75,8 +77,13 @@ class AIW_Wizard_Controller
             ? wp_kses_post(wp_unslash($_POST['aiw_post_content']))
             : '';
 
-        $restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
-        $restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
+        $restriction_start = isset($_POST['aiw_restriction_start'])
+            ? sanitize_text_field(wp_unslash($_POST['aiw_restriction_start']))
+            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
+
+        $restriction_end = isset($_POST['aiw_restriction_end'])
+            ? sanitize_text_field(wp_unslash($_POST['aiw_restriction_end']))
+            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
 
         $inline_image_count = isset($_POST['aiw_inline_image_count'])
             ? max(0, (int) wp_unslash($_POST['aiw_inline_image_count']))

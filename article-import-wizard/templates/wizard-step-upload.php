@@ -33,6 +33,14 @@ if (!defined('ABSPATH')) {
 
             <table class="form-table" role="presentation">
                 <tr>
+                    <th scope="row"><?php esc_html_e('Restriction Start Shortcode', 'article-import-wizard'); ?></th>
+                    <td><?php echo esc_html((string) $preview_data['restriction_start']); ?></td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e('Restriction End Shortcode', 'article-import-wizard'); ?></th>
+                    <td><?php echo esc_html((string) $preview_data['restriction_end']); ?></td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e('Membership Number', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['membership_number']); ?></td>
                 </tr>
@@ -40,6 +48,19 @@ if (!defined('ABSPATH')) {
                     <th scope="row"><?php esc_html_e('Resolved Public Author', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['attributed_author_name']); ?></td>
                 </tr>
+                        <th scope="row"><label for="aiw_restriction_start"><?php esc_html_e('Restriction Start Shortcode', 'article-import-wizard'); ?></label></th>
+                        <td>
+                            <input id="aiw_restriction_start" name="aiw_restriction_start" type="text" class="regular-text" value="<?php echo esc_attr((string) $default_restriction_start); ?>" />
+                            <p class="description"><?php esc_html_e('Inserted at the [RESTRICT] anchor inside the article.', 'article-import-wizard'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="aiw_restriction_end"><?php esc_html_e('Restriction End Shortcode', 'article-import-wizard'); ?></label></th>
+                        <td>
+                            <input id="aiw_restriction_end" name="aiw_restriction_end" type="text" class="regular-text" value="<?php echo esc_attr((string) $default_restriction_end); ?>" />
+                            <p class="description"><?php esc_html_e('Inserted after the article body and before the author bio.', 'article-import-wizard'); ?></p>
+                        </td>
+                    </tr>
                 <tr>
                     <th scope="row"><?php esc_html_e('Title', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['post_title']); ?></td>
