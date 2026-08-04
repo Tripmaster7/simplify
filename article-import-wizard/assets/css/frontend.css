@@ -9,10 +9,12 @@
 }
 
 .aiw-bio-box__image {
-    width: 72px;
-    height: 72px;
-    object-fit: cover;
-    border-radius: 50%;
+    width: auto;
+    max-width: 96px;
+    max-height: 128px;
+    height: auto;
+    object-fit: contain;
+    border-radius: 10px;
     display: block;
 }
 

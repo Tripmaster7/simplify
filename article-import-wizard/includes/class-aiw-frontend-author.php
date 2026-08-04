@@ -37,32 +37,46 @@ class AIW_Frontend_Author
         );
     }
 
-    public function filter_author_name(string $display_name): string
+    public function filter_author_name($display_name): string
     {
-        if (is_admin()) {
-            return $display_name;
+        if (!$this->should_filter_frontend_author()) {
+            return is_string($display_name) ? $display_name : '';
         }
 
         $author = $this->get_attributed_author_from_current_post();
         if (!$author instanceof WP_User) {
-            return $display_name;
+            return is_string($display_name) ? $display_name : '';
         }
 
         return $author->display_name;
     }
 
-    public function filter_author_link(string $link): string
+    public function filter_author_link($link): string
     {
-        if (is_admin()) {
-            return $link;
+        if (!$this->should_filter_frontend_author()) {
+            return is_string($link) ? $link : '';
         }
 
         $author = $this->get_attributed_author_from_current_post();
         if (!$author instanceof WP_User) {
-            return $link;
+            return is_string($link) ? $link : '';
         }
 
         return get_author_posts_url((int) $author->ID);
+    }
+
+    private function should_filter_frontend_author(): bool
+    {
+        if (is_admin() || !is_singular()) {
+            return false;
+        }
+
+        $post = get_post();
+        if (!$post) {
+            return false;
+        }
+
+        return (int) get_post_meta($post->ID, '_aiw_imported', true) === 1;
     }
 
     private function get_attributed_author_from_current_post(): ?WP_User

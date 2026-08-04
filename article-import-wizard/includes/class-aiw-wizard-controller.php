@@ -423,7 +423,7 @@ class AIW_Wizard_Controller
         $restriction_end = trim($restriction_end);
         $image_html = '';
         if ($image_id > 0) {
-            $candidate = wp_get_attachment_image($image_id, 'thumbnail', false, ['class' => 'aiw-bio-box__image']);
+            $candidate = wp_get_attachment_image($image_id, 'medium', false, ['class' => 'aiw-bio-box__image']);
             if (is_string($candidate)) {
                 $image_html = $candidate;
             }

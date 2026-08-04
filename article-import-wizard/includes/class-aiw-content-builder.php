@@ -18,7 +18,7 @@ class AIW_Content_Builder
         $image_html = '';
 
         if ($image_id > 0) {
-            $image_html = wp_get_attachment_image($image_id, 'thumbnail', false, ['class' => 'aiw-bio-box__image']);
+            $image_html = wp_get_attachment_image($image_id, 'medium', false, ['class' => 'aiw-bio-box__image']);
             if (!is_string($image_html)) {
                 $image_html = '';
             }
