@@ -28,7 +28,6 @@ Pflicht oder dringend empfohlen:
 - [AUTHOR_MEMBERSHIP: 123456]
 
 Optional:
-- [AUTHOR_NAME: Vorname Nachname]
 - [BIO: Kurzer Autorentext]
 - [RESTRICT]
 - [HEADER Zwischenüberschrift]
@@ -62,7 +61,6 @@ Diesen Block in ein neues Word-Dokument kopieren und ausfüllen.
 [SUBTITLE: ]
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
-[AUTHOR_NAME: ]
 
 [RESTRICT]
 

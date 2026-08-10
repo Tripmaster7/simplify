@@ -36,6 +36,35 @@ class AIW_Wizard_Controller
     {
         add_action('admin_post_aiw_preview_import', [$this, 'handle_preview_import']);
         add_action('admin_post_aiw_create_draft', [$this, 'handle_create_draft']);
+        add_action('wp_ajax_aiw_validate_membership', [$this, 'handle_validate_membership']);
+    }
+
+    public function handle_validate_membership(): void
+    {
+        if (!$this->can_access_wizard()) {
+            wp_send_json_error(['message' => __('Unauthorized.', 'article-import-wizard')], 403);
+        }
+
+        check_ajax_referer('aiw_validate_membership', 'nonce');
+
+        $membership_number = isset($_POST['membership_number'])
+            ? sanitize_text_field(wp_unslash($_POST['membership_number']))
+            : '';
+
+        if (!$this->is_valid_membership_number($membership_number)) {
+            wp_send_json_error([
+                'message' => __('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'),
+            ]);
+        }
+
+        $author = $this->author_service->find_by_membership_number($membership_number);
+        if (!$author) {
+            wp_send_json_error([
+                'message' => __('No author found for that membership number.', 'article-import-wizard'),
+            ]);
+        }
+
+        wp_send_json_success(['name' => $author->display_name]);
     }
 
     public function render_page(): void
@@ -51,8 +80,6 @@ class AIW_Wizard_Controller
 
         $default_inline_slots = AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
         $default_broken_link_mode = AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
-        $default_restriction_start = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
-        $default_restriction_end = AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
         $help_url = AIW_PLUGIN_URL . 'docs/editorial-cheat-sheet-print.html';
         $available_categories = get_categories([
             'hide_empty' => false,
@@ -77,6 +104,10 @@ class AIW_Wizard_Controller
 
         $post_title = isset($_POST['aiw_post_title'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_post_title']))
+            : '';
+
+        $travel_date = isset($_POST['aiw_travel_date'])
+            ? sanitize_text_field(wp_unslash($_POST['aiw_travel_date']))
             : '';
 
         $post_content = isset($_POST['aiw_post_content'])
@@ -120,6 +151,14 @@ class AIW_Wizard_Controller
 
         if ($membership_number === '') {
             $this->redirect_with_error(__('Membership number is required.', 'article-import-wizard'));
+        }
+
+        if (!$this->is_valid_membership_number($membership_number)) {
+            $this->redirect_with_error(__('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'));
+        }
+
+        if (!$this->is_valid_iso_date($travel_date)) {
+            $this->redirect_with_error(__('Please select a valid travel date.', 'article-import-wizard'));
         }
 
         if (empty($category_ids)) {
@@ -226,6 +265,7 @@ class AIW_Wizard_Controller
             'attributed_author_name' => (string) $attributed_author->display_name,
             'operator_user_id' => (int) $operator_user_id,
             'post_title' => $post_title,
+            'travel_date' => $travel_date,
             'working_content' => $working_content,
             'restriction_start' => $restriction_start,
             'restriction_end' => $restriction_end,
@@ -350,6 +390,7 @@ class AIW_Wizard_Controller
         update_post_meta($post_id, '_aiw_restriction_shortcode_start', isset($preview['restriction_start']) ? (string) $preview['restriction_start'] : '');
         update_post_meta($post_id, '_aiw_restriction_shortcode_end', isset($preview['restriction_end']) ? (string) $preview['restriction_end'] : '');
         update_post_meta($post_id, '_aiw_category_ids', $category_ids);
+        update_post_meta($post_id, '_aiw_travel_date', isset($preview['travel_date']) ? (string) $preview['travel_date'] : '');
 
         $notify_email = AIW_Settings::get_option_string(AIW_Settings::OPTION_NOTIFY_EMAIL, get_option('admin_email', ''));
         $this->notifier->send_import_complete_email($post_id, $notify_email, [
@@ -374,6 +415,20 @@ class AIW_Wizard_Controller
     private function can_access_wizard(): bool
     {
         return current_user_can('edit_posts') && current_user_can('upload_files');
+    }
+
+    private function is_valid_membership_number(string $membership_number): bool
+    {
+        return preg_match('/^0\d{4}$/', $membership_number) === 1;
+    }
+
+    private function is_valid_iso_date(string $date): bool
+    {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $parts) !== 1) {
+            return false;
+        }
+
+        return checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]);
     }
 
     private function parse_uploaded_docx(): array
@@ -792,8 +847,8 @@ class AIW_Wizard_Controller
     private function normalize_title_text(string $text): string
     {
         $text = trim($text);
-        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]$/i', '$2', $text);
-        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\]$/i', '', (string) $text);
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]$/i', '$2', $text);
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|WRITING_DATE|DATE|BIO)\]$/i', '', (string) $text);
 
         return trim((string) $text);
     }

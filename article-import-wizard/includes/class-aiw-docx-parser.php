@@ -142,10 +142,6 @@ class AIW_DOCX_Parser
             $writing_date = (string) $metadata['writing_date'];
         }
 
-        if (!empty($metadata['author_name']) && $doc_author === '') {
-            $doc_author = (string) $metadata['author_name'];
-        }
-
         return [
             'title' => $title,
             'subtitle' => $subtitle,
@@ -278,10 +274,11 @@ class AIW_DOCX_Parser
             'title' => '/\[(TITLE|HEADLINE|H1)\s*:\s*([^\]]+)\]/i',
             'subtitle' => '/\[(SUBTITLE|SUBHEADER|H2)\s*:\s*([^\]]+)\]/i',
             'author_membership' => '/\[(AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID)\s*:\s*([^\]]+)\]/i',
-            'author_name' => '/\[(AUTHOR_NAME)\s*:\s*([^\]]+)\]/i',
             'writing_date' => '/\[(WRITING_DATE|DATE)\s*:\s*([^\]]+)\]/i',
             'bio' => '/\[(BIO)\s*:\s*([^\]]+)\]/i',
         ];
+
+        $text = (string) preg_replace('/\[AUTHOR_NAME\s*:\s*[^\]]*\]/i', '', $text);
 
         foreach ($patterns as $key => $pattern) {
             if (preg_match_all($pattern, $text, $matches, PREG_SET_ORDER)) {
@@ -331,8 +328,8 @@ class AIW_DOCX_Parser
 
     private function normalize_metadata_text(string $text): string
     {
-        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^"]+?)\]$/i', '$2', trim($text));
-        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+?)\]$/i', '$2', (string) $text);
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|WRITING_DATE|DATE|BIO)\s*:\s*([^"]+?)\]$/i', '$2', trim($text));
+        $text = preg_replace('/^\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+?)\]$/i', '$2', (string) $text);
 
         return trim((string) $text);
     }

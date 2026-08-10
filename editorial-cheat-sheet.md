@@ -28,7 +28,6 @@ Required or strongly recommended:
 - [AUTHOR_MEMBERSHIP: 123456]
 
 Optional:
-- [AUTHOR_NAME: First Last]
 - [BIO: Short author bio text]
 - [RESTRICT]
 - [HEADER 3 Headline 3]
@@ -60,7 +59,6 @@ Copy this block into a new Word document and fill it in.
 [SUBTITLE: ]
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
-[AUTHOR_NAME: ]
 
 [RESTRICT]
 

@@ -192,7 +192,6 @@ Recommended tag syntax:
 - [HEADER 3 Headline 3]
 - [HEADER 4 Headline 4]
 - [AUTHOR_MEMBERSHIP: 123456]
-- [AUTHOR_NAME: Max Mustermann]
 - [WRITING_DATE: 2026-08-04]
 - [RESTRICT]
 - [BIO: Short author bio text]
@@ -228,7 +227,7 @@ Regex suggestion:
 - /\[(Bild|Image)\s*(\d+)\s*(?::[^\]]*)?\]/i
 
 Metadata regex suggestions:
-- Value tags: /\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|AUTHOR_NAME|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]/i
+- Value tags: /\[(TITLE|HEADLINE|H1|SUBTITLE|SUBHEADER|H2|AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID|WRITING_DATE|DATE|BIO)\s*:\s*([^\]]+)\]/i
 - Anchor tags: /\[(RESTRICT)\]/i
 - Legacy flag tags: /\[(RESTRICT_START|RESTRICT_END)\]/i
 

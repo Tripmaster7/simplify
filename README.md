@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 0.1.5
+**Current version:** 0.1.6
 
 **Author:** GitHub Copilot and Jens
 
@@ -58,7 +58,6 @@ The importer recognizes these metadata markers:
 [TITLE: Article headline]
 [SUBTITLE: Article subtitle]
 [AUTHOR_MEMBERSHIP: 123456]
-[AUTHOR_NAME: Max Mustermann]
 [WRITING_DATE: 2026-08-04]
 [BIO: Short author biography]
 [RESTRICT]

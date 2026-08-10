@@ -17,6 +17,7 @@ class AIW_Admin_Menu
     {
         add_action('admin_menu', [$this, 'register_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('admin_head', [$this, 'render_menu_highlight']);
     }
 
     public function register_menu(): void
@@ -30,6 +31,29 @@ class AIW_Admin_Menu
             'dashicons-media-document',
             26
         );
+    }
+
+    public function render_menu_highlight(): void
+    {
+        ?>
+        <style>
+            #adminmenu #toplevel_page_aiw-import-wizard > a {
+                background: #b32d2e;
+                color: #fff;
+                font-weight: 700;
+            }
+
+            #adminmenu #toplevel_page_aiw-import-wizard > a:hover,
+            #adminmenu #toplevel_page_aiw-import-wizard > a:focus {
+                background: #8a2424;
+                color: #fff;
+            }
+
+            #adminmenu #toplevel_page_aiw-import-wizard > a .wp-menu-image::before {
+                color: #fff;
+            }
+        </style>
+        <?php
     }
 
     public function enqueue_assets(string $hook_suffix): void
@@ -52,5 +76,14 @@ class AIW_Admin_Menu
             AIW_PLUGIN_VERSION,
             true
         );
+
+        wp_localize_script('aiw-admin-js', 'AIWAdmin', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'membershipNonce' => wp_create_nonce('aiw_validate_membership'),
+            'membershipFormatMessage' => __('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'),
+            'membershipCheckingMessage' => __('Checking membership number...', 'article-import-wizard'),
+            'membershipAuthorLabel' => __('Author:', 'article-import-wizard'),
+            'membershipRequestError' => __('The membership number could not be checked. Please try again.', 'article-import-wizard'),
+        ]);
     }
 }

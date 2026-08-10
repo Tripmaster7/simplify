@@ -67,6 +67,10 @@ if (!defined('ABSPATH')) {
                     <td><?php echo esc_html((string) $preview_data['post_title']); ?></td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e('Travel Date', 'article-import-wizard'); ?></th>
+                    <td><?php echo esc_html(isset($preview_data['travel_date']) ? (string) $preview_data['travel_date'] : ''); ?></td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e('Source Document', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['source_filename']); ?></td>
                 </tr>
@@ -147,24 +151,11 @@ if (!defined('ABSPATH')) {
 
                 <table class="form-table" role="presentation">
                     <tr>
-                        <th scope="row"><label for="aiw_restriction_start"><?php esc_html_e('Restriction Start Shortcode', 'article-import-wizard'); ?></label></th>
-                        <td>
-                            <input id="aiw_restriction_start" name="aiw_restriction_start" type="text" class="regular-text" value="<?php echo esc_attr((string) $default_restriction_start); ?>" />
-                            <p class="description"><?php esc_html_e('Inserted at the [RESTRICT] anchor inside the article.', 'article-import-wizard'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="aiw_restriction_end"><?php esc_html_e('Restriction End Shortcode', 'article-import-wizard'); ?></label></th>
-                        <td>
-                            <input id="aiw_restriction_end" name="aiw_restriction_end" type="text" class="regular-text" value="<?php echo esc_attr((string) $default_restriction_end); ?>" />
-                            <p class="description"><?php esc_html_e('Inserted after the article body and before the author bio.', 'article-import-wizard'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
                         <th scope="row"><label for="aiw_membership_number"><?php esc_html_e('Membership Number', 'article-import-wizard'); ?></label></th>
                         <td>
-                            <input id="aiw_membership_number" name="aiw_membership_number" type="text" class="regular-text" required />
-                            <p class="description"><?php esc_html_e('Must match the author username exactly.', 'article-import-wizard'); ?></p>
+                            <input id="aiw_membership_number" name="aiw_membership_number" type="text" class="regular-text" inputmode="numeric" pattern="0[0-9]{4}" maxlength="5" aria-describedby="aiw-membership-help aiw-membership-status" required />
+                            <p id="aiw-membership-help" class="description"><?php esc_html_e('Enter five digits starting with 0.', 'article-import-wizard'); ?></p>
+                            <p id="aiw-membership-status" class="aiw-membership-status" aria-live="polite"></p>
                         </td>
                     </tr>
                     <tr>
@@ -196,17 +187,17 @@ if (!defined('ABSPATH')) {
                         </td>
                     </tr>
                     <tr>
+                        <th scope="row"><label for="aiw_travel_date"><?php esc_html_e('Travel Date', 'article-import-wizard'); ?></label></th>
+                        <td>
+                            <input id="aiw_travel_date" name="aiw_travel_date" type="date" required />
+                            <p class="description"><?php esc_html_e('Select the date of the travel.', 'article-import-wizard'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
                         <th scope="row"><label for="aiw_docx_file"><?php esc_html_e('DOCX File', 'article-import-wizard'); ?></label></th>
                         <td>
                             <input id="aiw_docx_file" name="aiw_docx_file" type="file" accept=".docx" />
                             <p class="description"><?php esc_html_e('DOCX is parsed for title/content/placeholders.', 'article-import-wizard'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="aiw_post_content"><?php esc_html_e('Article Content', 'article-import-wizard'); ?></label></th>
-                        <td>
-                            <textarea id="aiw_post_content" name="aiw_post_content" rows="12" class="large-text" placeholder="Paste parsed or prepared content here..."></textarea>
-                            <p class="description"><?php esc_html_e('Optional if content is available in DOCX.', 'article-import-wizard'); ?></p>
                         </td>
                     </tr>
                     <tr>
