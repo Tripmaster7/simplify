@@ -189,8 +189,8 @@ if (!defined('ABSPATH')) {
                     <tr>
                         <th scope="row"><label for="aiw_travel_date"><?php esc_html_e('Travel Date', 'article-import-wizard'); ?></label></th>
                         <td>
-                            <input id="aiw_travel_date" name="aiw_travel_date" type="date" required />
-                            <p class="description"><?php esc_html_e('Select the date of the travel.', 'article-import-wizard'); ?></p>
+                            <input id="aiw_travel_date" name="aiw_travel_date" type="date" />
+                            <p class="description"><?php esc_html_e('Optionally select the date of the travel.', 'article-import-wizard'); ?></p>
                         </td>
                     </tr>
                     <tr>

@@ -132,7 +132,7 @@ class AIW_DOCX_Parser
 
         $title = $this->normalize_metadata_text($title);
 
-        if (!empty($metadata['subtitle']) && $subtitle === '') {
+        if (!empty($metadata['subtitle'])) {
             $subtitle = (string) $metadata['subtitle'];
         }
 

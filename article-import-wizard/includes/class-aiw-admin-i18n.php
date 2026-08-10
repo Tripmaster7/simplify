@@ -52,7 +52,7 @@ class AIW_Admin_I18n
         'Article Title' => 'Artikeltitel',
         'Optional if title is available in DOCX.' => 'Optional, wenn der Titel in der DOCX enthalten ist.',
         'Travel Date' => 'Reisedatum',
-        'Select the date of the travel.' => 'Wählen Sie das Datum der Reise aus.',
+        'Optionally select the date of the travel.' => 'Wählen Sie optional das Datum der Reise aus.',
         'DOCX File' => 'DOCX-Datei',
         'DOCX is parsed for title/content/placeholders.' => 'Die DOCX wird auf Titel/Inhalt/Platzhalter analysiert.',
         'Article Content' => 'Artikelinhalt',

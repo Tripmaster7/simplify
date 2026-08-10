@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 0.1.6
+**Current version:** 0.1.7
 
 **Author:** GitHub Copilot and Jens
 

@@ -157,7 +157,7 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'));
         }
 
-        if (!$this->is_valid_iso_date($travel_date)) {
+        if ($travel_date !== '' && !$this->is_valid_iso_date($travel_date)) {
             $this->redirect_with_error(__('Please select a valid travel date.', 'article-import-wizard'));
         }
 
@@ -192,9 +192,10 @@ class AIW_Wizard_Controller
 
         if ($post_content === '' && !empty($doc_parse['content'])) {
             $post_content = wp_kses_post((string) $doc_parse['content']);
-            if (!empty($doc_parse['subtitle'])) {
-                $post_content = '<h2>' . esc_html($this->normalize_title_text((string) $doc_parse['subtitle'])) . '</h2>' . "\n" . $post_content;
-            }
+        }
+
+        if (!empty($doc_parse['subtitle'])) {
+            $post_content = '<h2>' . esc_html($this->normalize_title_text((string) $doc_parse['subtitle'])) . '</h2>' . "\n" . $post_content;
         }
 
         if ($post_title === '' || $post_content === '') {
