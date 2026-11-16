@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.0.1
+**Current version:** 1.0.2
 
 **Author:** GitHub Copilot and Jens
 
@@ -43,7 +43,7 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 1. Enter the author's membership number and select at least one category.
 2. Upload a DOCX file and optionally override the extracted title or content.
 3. Upload the featured image, inline images, and author image as needed.
-4. Review or update the author's biography. If the field is left empty, a `[BIO: ...]` marker from the DOCX is used, and otherwise the bio already stored on the author's profile.
+4. Review or update the author's biography. If the field is left empty, a `[BIO: ...]` marker from the DOCX is used, and otherwise the bio already stored on the author's profile. The `[BIO: ...]` marker may span several paragraphs; everything up to the closing `]` is the bio, and each paragraph stays a paragraph in the bio box. Web addresses in the bio (`https://...` or `www....`) become links and are included in the link check.
 5. Generate the preview. The plugin parses the document, maps images, builds block markup, inserts restriction shortcodes, and checks links.
 6. Review warnings, categories, author attribution, and the generated article.
 7. Confirm to create the draft and send the notification email.

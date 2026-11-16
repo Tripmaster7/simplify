@@ -28,7 +28,7 @@ Required or strongly recommended:
 - [AUTHOR_MEMBERSHIP: 01234]
 
 Optional:
-- [BIO: Short author bio text]
+- [BIO: Short author bio text] (may span several paragraphs; end it with ])
 - [RESTRICT] (start of the members-only part; without it: after the 2nd paragraph, or after the 1st if it has 1,000+ characters)
 - [HEADER 3 Headline 3]
 - [HEADER 4 Headline 4]

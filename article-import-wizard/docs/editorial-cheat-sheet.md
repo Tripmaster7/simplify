@@ -28,7 +28,7 @@ Pflicht oder dringend empfohlen:
 - [AUTHOR_MEMBERSHIP: 01234]
 
 Optional:
-- [BIO: Kurzer Autorentext]
+- [BIO: Kurzer Autorentext] (darf mehrere Absätze lang sein; mit ] abschließen)
 - [RESTRICT] (Beginn des Mitgliederbereichs; ohne Marker: nach dem 2. Absatz, oder nach dem 1., wenn er 1.000+ Zeichen hat)
 - [HEADER Zwischenüberschrift]
 - [HEADER 3 Zwischenüberschrift]

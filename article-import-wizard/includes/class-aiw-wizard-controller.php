@@ -250,6 +250,10 @@ class AIW_Wizard_Controller
             }
         }
 
+        if (!empty($doc_metadata['bio_unclosed'])) {
+            $metadata_warnings[] = __('The [BIO: marker is not closed with "]". The bio was not imported and its text was kept in the article. Add "]" at the end of the bio.', 'article-import-wizard');
+        }
+
         // [WRITING_DATE: ...] becomes the post date. Without the marker WordPress uses the publish date.
         $post_date = '';
         if (!empty($doc_metadata['writing_date'])) {
@@ -637,8 +641,12 @@ class AIW_Wizard_Controller
 
         $bio_html .= '<div class="aiw-bio-box__body">';
         $bio_html .= '<h3 class="aiw-bio-box__name">' . esc_html($display_name) . '</h3>';
-        if ($bio !== '') {
-            $bio_html .= '<p class="aiw-bio-box__text">' . esc_html($bio) . '</p>';
+        // Blank lines separate bio paragraphs; single line breaks stay line breaks.
+        foreach (preg_split('/\R\s*\R/u', trim($bio)) ?: [] as $bio_paragraph) {
+            $bio_paragraph = trim($bio_paragraph);
+            if ($bio_paragraph !== '') {
+                $bio_html .= '<p class="aiw-bio-box__text">' . preg_replace('/\R/u', '<br>', $this->link_urls_in_text($bio_paragraph)) . '</p>';
+            }
         }
         $bio_html .= '</div></div>';
 
@@ -658,6 +666,39 @@ class AIW_Wizard_Controller
      * [RESTRICT] anchor if the document has one, otherwise automatically (see
      * find_automatic_restriction_position()).
      */
+    /**
+     * Escape plain text and turn web addresses (https://..., http://..., www....) into links.
+     * Sentence punctuation after an address ("...example.com.") is kept outside the link.
+     */
+    private function link_urls_in_text(string $text): string
+    {
+        $parts = preg_split('~((?:https?://|www\.)[^\s<>"]+)~iu', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+        if (!is_array($parts)) {
+            return esc_html($text);
+        }
+
+        $html = '';
+        foreach ($parts as $index => $part) {
+            // Odd indexes are the captured addresses.
+            if ($index % 2 === 0) {
+                $html .= esc_html($part);
+                continue;
+            }
+
+            $url = AIW_Link_Validator::normalize_link($part);
+            $trailing = (string) substr($part, strlen($url));
+            if ($url === '' || preg_match('~^(?:https?://|www\.)[^./]+\.[^/]~i', $url) !== 1) {
+                $html .= esc_html($part);
+                continue;
+            }
+
+            $href = stripos($url, 'www.') === 0 ? 'https://' . $url : $url;
+            $html .= '<a href="' . esc_url($href) . '">' . esc_html($url) . '</a>' . esc_html($trailing);
+        }
+
+        return $html;
+    }
+
     private function build_restricted_article_body(string $content, string $restriction_start, array &$metadata_warnings): string
     {
         $start_block = $this->wrap_shortcode_block($restriction_start);

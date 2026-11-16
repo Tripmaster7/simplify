@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Article Import Wizard 1.0.1\n"
+"Project-Id-Version: Article Import Wizard 1.0.2\n"
 "POT-Creation-Date: 2026-08-04 12:30+0000\n"
 "PO-Revision-Date: 2026-08-04 12:30+0000\n"
 "Last-Translator: GitHub Copilot and Jens\n"
@@ -355,3 +355,7 @@ msgstr "aus [WRITING_DATE]"
 #: templates/wizard-step-upload.php
 msgid "Not set. The publish date will be used."
 msgstr "Nicht gesetzt. Es wird das Veröffentlichungsdatum verwendet."
+
+#: includes/class-aiw-wizard-controller.php
+msgid "The [BIO: marker is not closed with \"]\". The bio was not imported and its text was kept in the article. Add \"]\" at the end of the bio."
+msgstr "Der [BIO:-Marker ist nicht mit „]“ geschlossen. Die Bio wurde nicht übernommen und ihr Text blieb im Artikel. Setzen Sie „]“ an das Ende der Bio."

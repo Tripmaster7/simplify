@@ -89,7 +89,7 @@ if (!defined('ABSPATH')) {
                     <th scope="row"><?php esc_html_e('Author Bio for Profile', 'article-import-wizard'); ?></th>
                     <td>
                         <?php if ((string) $preview_data['final_author_bio'] !== '') : ?>
-                            <?php echo esc_html((string) $preview_data['final_author_bio']); ?>
+                            <?php echo nl2br(esc_html((string) $preview_data['final_author_bio'])); ?>
                         <?php else : ?>
                             <em><?php esc_html_e('No bio provided.', 'article-import-wizard'); ?></em>
                         <?php endif; ?>

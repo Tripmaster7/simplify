@@ -67,6 +67,8 @@ class AIW_DOCX_Parser
         $first_body_text = '';
         $list_items = [];
 
+        $paragraphs = $this->merge_multi_paragraph_bio($paragraphs, $metadata);
+
         foreach ($paragraphs as $paragraph) {
             $text = trim($paragraph['text']);
             $plain = trim($this->strip_markup_markers($text));
@@ -174,13 +176,14 @@ class AIW_DOCX_Parser
         )));
         $placeholders = $this->extract_image_placeholders($content);
 
-        $title = $this->normalize_metadata_text($title);
+        // Titles are single-line: a line break (Shift+Enter) inside the title becomes a space.
+        $title = $this->normalize_metadata_text($this->collapse_whitespace($title));
 
         if (!empty($metadata['subtitle'])) {
             $subtitle = (string) $metadata['subtitle'];
         }
 
-        $subtitle = $this->normalize_metadata_text($subtitle);
+        $subtitle = $this->normalize_metadata_text($this->collapse_whitespace($subtitle));
 
         if (!empty($metadata['writing_date'])) {
             $writing_date = (string) $metadata['writing_date'];
@@ -571,6 +574,19 @@ class AIW_DOCX_Parser
                     }
                     break;
 
+                case 'br':
+                case 'cr':
+                    // Shift+Enter line break. Page and column breaks only separate words.
+                    $break_type = $this->word_attribute($child, 'type');
+                    $state['text'] .= ($break_type === '' || $break_type === 'textWrapping') ? "\n" : ' ';
+                    break;
+
+                case 'tab':
+                    // A tab inside a run separates words; w:tab inside w:pPr/w:tabs is a tab stop
+                    // definition and is never reached because pPr is skipped.
+                    $state['text'] .= ' ';
+                    break;
+
                 case 'delText':
                 case 'pPr':
                 case 'rPr':
@@ -754,8 +770,75 @@ class AIW_DOCX_Parser
             $html .= '</a>';
         }
 
-        // Tidy up: no formatting tags around only whitespace.
-        return (string) preg_replace('/<(strong|em)>(\s*)<\/\1>/', '$2', $html);
+        // Tidy up: no formatting tags around only whitespace; Shift+Enter line breaks become <br>.
+        $html = (string) preg_replace('/<(strong|em)>(\s*)<\/\1>/', '$2', $html);
+
+        return str_replace("\n", '<br>', $html);
+    }
+
+    private function collapse_whitespace(string $text): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', $text));
+    }
+
+    /**
+     * Authors often write the bio over several Word paragraphs:
+     *   [BIO: First paragraph
+     *   Second paragraph
+     *   Last paragraph.]
+     * Each paragraph is parsed on its own, so the marker would never be complete. Join the
+     * paragraphs from "[BIO:" up to the first "]" into one paragraph, separated by blank lines, so
+     * the normal marker parsing sees the whole bio. Text before "[BIO:" and after "]" stays
+     * article text. If no "]" follows, nothing is joined (the article text is kept) and
+     * $metadata['bio_unclosed'] is set so the preview can warn.
+     *
+     * @param array<int,array{text:string,style:string,list:?array}> $paragraphs
+     */
+    private function merge_multi_paragraph_bio(array $paragraphs, array &$metadata): array
+    {
+        $merged = [];
+        $count = count($paragraphs);
+
+        for ($i = 0; $i < $count; $i++) {
+            $plain = trim($this->strip_markup_markers($paragraphs[$i]['text']));
+
+            // "[BIO:" with no closing "]" later in the same paragraph.
+            if (preg_match('/\[\s*BIO\s*:[^\]]*$/iu', $plain) !== 1) {
+                $merged[] = $paragraphs[$i];
+                continue;
+            }
+
+            $close = null;
+            for ($j = $i + 1; $j < $count; $j++) {
+                if (strpos($this->strip_markup_markers($paragraphs[$j]['text']), ']') !== false) {
+                    $close = $j;
+                    break;
+                }
+            }
+
+            if ($close === null) {
+                $metadata['bio_unclosed'] = true;
+                $merged[] = $paragraphs[$i];
+                continue;
+            }
+
+            $parts = [];
+            for ($k = $i; $k <= $close; $k++) {
+                $part = trim($this->strip_markup_markers($paragraphs[$k]['text']));
+                if ($part !== '') {
+                    $parts[] = $part;
+                }
+            }
+
+            $merged[] = [
+                'text' => implode("\n\n", $parts),
+                'style' => '',
+                'list' => null,
+            ];
+            $i = $close;
+        }
+
+        return $merged;
     }
 
     /**

@@ -85,6 +85,7 @@ class AIW_Admin_I18n
         '[WRITING_DATE: %s] is not a valid date, so the post date was not set. Use the format 2025-01-15 or 15.01.2025.' => '[WRITING_DATE: %s] ist kein gültiges Datum, daher wurde das Beitragsdatum nicht gesetzt. Verwenden Sie das Format 2025-01-15 oder 15.01.2025.',
         'The writing date %s is in the future. Publishing the draft will schedule it for that date.' => 'Das Schreibdatum %s liegt in der Zukunft. Beim Veröffentlichen wird der Entwurf für dieses Datum geplant.',
         'Post Date' => 'Beitragsdatum',
+        'The [BIO: marker is not closed with "]". The bio was not imported and its text was kept in the article. Add "]" at the end of the bio.' => 'Der [BIO:-Marker ist nicht mit „]“ geschlossen. Die Bio wurde nicht übernommen und ihr Text blieb im Artikel. Setzen Sie „]“ an das Ende der Bio.',
         'from [WRITING_DATE]' => 'aus [WRITING_DATE]',
         'Not set. The publish date will be used.' => 'Nicht gesetzt. Es wird das Veröffentlichungsdatum verwendet.',
         'No [RESTRICT] marker found. The restricted part starts automatically after paragraph %d.' => 'Kein [RESTRICT]-Marker gefunden. Der geschützte Teil beginnt automatisch nach Absatz %d.',
