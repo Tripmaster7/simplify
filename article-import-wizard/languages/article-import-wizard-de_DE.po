@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Article Import Wizard 1.0.2\n"
+"Project-Id-Version: Article Import Wizard 1.1.0\n"
 "POT-Creation-Date: 2026-08-04 12:30+0000\n"
 "PO-Revision-Date: 2026-08-04 12:30+0000\n"
 "Last-Translator: GitHub Copilot and Jens\n"
@@ -359,3 +359,144 @@ msgstr "Nicht gesetzt. Es wird das Veröffentlichungsdatum verwendet."
 #: includes/class-aiw-wizard-controller.php
 msgid "The [BIO: marker is not closed with \"]\". The bio was not imported and its text was kept in the article. Add \"]\" at the end of the bio."
 msgstr "Der [BIO:-Marker ist nicht mit „]“ geschlossen. Die Bio wurde nicht übernommen und ihr Text blieb im Artikel. Setzen Sie „]“ an das Ende der Bio."
+
+#, php-format
+msgid "%1$d imported articles have this title and author. The most recently changed one (#%2$d) will be updated."
+msgstr "%1$d importierte Artikel haben diesen Titel und Autor. Der zuletzt geänderte (#%2$d) wird aktualisiert."
+
+msgid "An existing article was updated by a new import. The previous version is kept as a revision."
+msgstr "Ein bestehender Artikel wurde durch einen neuen Import aktualisiert. Die vorherige Version bleibt als Revision erhalten."
+
+#, php-format
+msgid "Article #%1$d (%2$s):"
+msgstr "Artikel #%1$d (%2$s):"
+
+#, php-format
+msgid "Article #%1$s updated. Attributed author: %2$s"
+msgstr "Artikel #%1$s aktualisiert. Zugeordneter Autor: %2$s"
+
+#, php-format
+msgid "Article Import Completed: %s"
+msgstr "Artikel-Import abgeschlossen: %s"
+
+#, php-format
+msgid "Article Updated by Import: %s"
+msgstr "Artikel durch Import aktualisiert: %s"
+
+#, php-format
+msgid "Attributed Author: %s"
+msgstr "Zugeordneter Autor: %s"
+
+msgid "Author:"
+msgstr "Autor:"
+
+msgid "Checking membership number..."
+msgstr "Mitgliedsnummer wird geprüft ..."
+
+msgid "Could not open DOCX file."
+msgstr "Die DOCX-Datei konnte nicht geöffnet werden."
+
+msgid "Create as a new article instead (the existing article stays unchanged)"
+msgstr "Stattdessen als neuen Artikel anlegen (der bestehende Artikel bleibt unverändert)"
+
+msgid "DOCX document content is missing."
+msgstr "Der Inhalt des DOCX-Dokuments fehlt."
+
+#, php-format
+msgid "Edit URL: %s"
+msgstr "Bearbeiten: %s"
+
+msgid "Enter a valid five-digit membership number starting with 0."
+msgstr "Geben Sie eine gültige fünfstellige Mitgliedsnummer ein, die mit 0 beginnt."
+
+msgid "Enter five digits starting with 0."
+msgstr "Geben Sie fünf Ziffern ein, beginnend mit 0."
+
+msgid "Flag only"
+msgstr "Nur markieren"
+
+#, php-format
+msgid "Imported By (Internal User ID): %d"
+msgstr "Importiert von (interne Benutzer-ID): %d"
+
+#, php-format
+msgid "Invalid Links: %d"
+msgstr "Ungültige Links: %d"
+
+#, php-format
+msgid "Membership Number: %s"
+msgstr "Mitgliedsnummer: %s"
+
+msgid "No author found for that membership number."
+msgstr "Für diese Mitgliedsnummer wurde kein Autor gefunden."
+
+msgid "Only DOCX files are allowed."
+msgstr "Es sind nur DOCX-Dateien erlaubt."
+
+msgid "Optionally select the date of the travel."
+msgstr "Wählen Sie optional das Datum der Reise aus."
+
+#, php-format
+msgid "Picture slots without a new upload keep their previous picture: %s"
+msgstr "Bildslots ohne neuen Upload behalten ihr bisheriges Bild: %s"
+
+msgid "Please select a valid travel date."
+msgstr "Bitte wählen Sie ein gültiges Reisedatum aus."
+
+#, php-format
+msgid "Post ID: %d"
+msgstr "Beitrags-ID: %d"
+
+msgid "Preview generated. This upload updates an existing article. Review and confirm the update."
+msgstr "Vorschau erstellt. Dieser Upload aktualisiert einen bestehenden Artikel. Bitte prüfen und die Aktualisierung bestätigen."
+
+msgid "The article could not be saved."
+msgstr "Der Artikel konnte nicht gespeichert werden."
+
+msgid "The article import process has completed."
+msgstr "Der Artikel-Import ist abgeschlossen."
+
+msgid "The article to update is no longer available or you may not edit it. Please generate the preview again."
+msgstr "Der zu aktualisierende Artikel ist nicht mehr verfügbar oder Sie dürfen ihn nicht bearbeiten. Bitte erzeugen Sie die Vorschau erneut."
+
+#, php-format
+msgid "The article was edited in WordPress on %s, after its last import. Those edits will be overwritten; they stay available as a revision."
+msgstr "Der Artikel wurde am %s nach seinem letzten Import in WordPress bearbeitet. Diese Änderungen werden überschrieben; sie bleiben als Revision erhalten."
+
+msgid "The membership number could not be checked. Please try again."
+msgstr "Die Mitgliedsnummer konnte nicht geprüft werden. Bitte versuchen Sie es erneut."
+
+msgid "The text, pictures, categories and bio are replaced by this upload. Title, author and status stay unchanged."
+msgstr "Text, Bilder, Kategorien und Bio werden durch diesen Upload ersetzt. Titel, Autor und Status bleiben unverändert."
+
+msgid "This article is published. Confirming changes it live; the previous version is kept as a revision."
+msgstr "Dieser Artikel ist veröffentlicht. Die Bestätigung ändert ihn sofort; die vorherige Version bleibt als Revision erhalten."
+
+#, php-format
+msgid "This upload matches the existing article #%1$d \"%2$s\", which you are not allowed to edit. Please ask an editor to import the update."
+msgstr "Dieser Upload passt zum bestehenden Artikel #%1$d „%2$s“, den Sie nicht bearbeiten dürfen. Bitte lassen Sie die Aktualisierung von jemandem mit Bearbeitungsrechten importieren."
+
+msgid "This upload updates an existing article."
+msgstr "Dieser Upload aktualisiert einen bestehenden Artikel."
+
+#, php-format
+msgid "Title: %s"
+msgstr "Titel: %s"
+
+msgid "Travel Date"
+msgstr "Reisedatum"
+
+msgid "Update Article"
+msgstr "Artikel aktualisieren"
+
+msgid "Update Published Article"
+msgstr "Veröffentlichten Artikel aktualisieren"
+
+msgid "Uploaded DOCX temp file is missing."
+msgstr "Die hochgeladene temporäre DOCX-Datei fehlt."
+
+msgid "Uploaded DOCX temp file is not accessible."
+msgstr "Auf die hochgeladene temporäre DOCX-Datei kann nicht zugegriffen werden."
+
+msgid "ZipArchive is not available on this server."
+msgstr "ZipArchive ist auf diesem Server nicht verfügbar."

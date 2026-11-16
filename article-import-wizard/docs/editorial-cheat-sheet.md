@@ -17,6 +17,7 @@ Diese Seite ausdrucken und am Arbeitsplatz bereithalten.
 - Die Mitgliedsnummer muss korrekt sein.
 - Das eingeloggte Redaktionskonto ist nur intern relevant.
 - Der öffentliche Autor wird immer über die Mitgliedsnummer bestimmt.
+- Zum Aktualisieren den Artikel mit gleichem Titel und gleicher Mitgliedsnummer erneut hochladen. Titel und Autor bleiben fest; Text, Bilder, Kategorien und Bio werden ersetzt. Nur geänderte Bilder hochladen.
 
 ## 3) Metadaten-Tags in der DOCX
 Diese Tags exakt so verwenden.

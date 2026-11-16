@@ -34,6 +34,41 @@ if (!defined('ABSPATH')) {
             <h2><?php esc_html_e('Preview Before Draft Creation', 'article-import-wizard'); ?></h2>
             <p><?php esc_html_e('Review this generated article. If everything looks good, create the draft.', 'article-import-wizard'); ?></p>
 
+            <?php
+            $update_post_id = isset($preview_data['update_post_id']) ? (int) $preview_data['update_post_id'] : 0;
+            $update_post_status = isset($preview_data['update_post_status']) ? (string) $preview_data['update_post_status'] : '';
+            $update_is_live = in_array($update_post_status, ['publish', 'private'], true);
+            $reused_image_slots = isset($preview_data['reused_image_slots']) && is_array($preview_data['reused_image_slots']) ? $preview_data['reused_image_slots'] : [];
+            ?>
+            <?php if ($update_post_id > 0) : ?>
+                <div class="notice inline <?php echo $update_is_live ? 'notice-error' : 'notice-warning'; ?>">
+                    <p>
+                        <strong><?php esc_html_e('This upload updates an existing article.', 'article-import-wizard'); ?></strong>
+                        <?php
+                        printf(
+                            /* translators: 1: post ID, 2: post status label */
+                            esc_html__('Article #%1$d (%2$s):', 'article-import-wizard'),
+                            $update_post_id,
+                            esc_html((string) (get_post_status_object($update_post_status)->label ?? $update_post_status))
+                        );
+                        ?>
+                        <a href="<?php echo esc_url((string) get_edit_post_link($update_post_id, '')); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html((string) $preview_data['post_title']); ?></a>
+                    </p>
+                    <p><?php esc_html_e('The text, pictures, categories and bio are replaced by this upload. Title, author and status stay unchanged.', 'article-import-wizard'); ?></p>
+                    <?php if (!empty($reused_image_slots)) : ?>
+                        <p>
+                            <?php
+                            printf(
+                                /* translators: %s: comma-separated picture slot numbers */
+                                esc_html__('Picture slots without a new upload keep their previous picture: %s', 'article-import-wizard'),
+                                esc_html(implode(', ', array_map('intval', $reused_image_slots)))
+                            );
+                            ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
             <table class="form-table" role="presentation">
                 <tr>
                     <th scope="row"><?php esc_html_e('Restriction Start Shortcode', 'article-import-wizard'); ?></th>
@@ -147,7 +182,32 @@ if (!defined('ABSPATH')) {
                 <?php wp_nonce_field('aiw_create_draft_nonce'); ?>
                 <input type="hidden" name="action" value="aiw_create_draft" />
                 <input type="hidden" name="aiw_preview_token" value="<?php echo esc_attr($preview_token); ?>" />
-                <?php submit_button(__('Create Draft From Preview', 'article-import-wizard'), 'primary', 'submit', false); ?>
+                <?php if ($update_post_id > 0) : ?>
+                    <p>
+                        <label>
+                            <input type="checkbox" name="aiw_create_new" value="1" id="aiw_create_new" />
+                            <?php esc_html_e('Create as a new article instead (the existing article stays unchanged)', 'article-import-wizard'); ?>
+                        </label>
+                    </p>
+                    <?php submit_button($update_is_live ? __('Update Published Article', 'article-import-wizard') : __('Update Article', 'article-import-wizard'), 'primary', 'submit', false, ['id' => 'aiw_confirm_button']); ?>
+                    <script>
+                        (function () {
+                            var checkbox = document.getElementById('aiw_create_new');
+                            var button = document.getElementById('aiw_confirm_button');
+                            if (!checkbox || !button) {
+                                return;
+                            }
+                            var updateLabel = button.value;
+                            checkbox.addEventListener('change', function () {
+                                button.value = checkbox.checked
+                                    ? '<?php echo esc_js(__('Create Draft From Preview', 'article-import-wizard')); ?>'
+                                    : updateLabel;
+                            });
+                        })();
+                    </script>
+                <?php else : ?>
+                    <?php submit_button(__('Create Draft From Preview', 'article-import-wizard'), 'primary', 'submit', false); ?>
+                <?php endif; ?>
                 <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=aiw-import-wizard')); ?>"><?php esc_html_e('Start New Import', 'article-import-wizard'); ?></a>
             </form>
         </div>

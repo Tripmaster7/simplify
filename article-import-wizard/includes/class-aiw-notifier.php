@@ -17,13 +17,19 @@ class AIW_Notifier
             return false;
         }
 
+        $is_update = !empty($context['updated']);
+
         $subject = sprintf(
-            __('Article Import Completed: %s', 'article-import-wizard'),
+            $is_update
+                ? __('Article Updated by Import: %s', 'article-import-wizard')
+                : __('Article Import Completed: %s', 'article-import-wizard'),
             $post->post_title
         );
 
         $lines = [];
-        $lines[] = __('The article import process has completed.', 'article-import-wizard');
+        $lines[] = $is_update
+            ? __('An existing article was updated by a new import. The previous version is kept as a revision.', 'article-import-wizard')
+            : __('The article import process has completed.', 'article-import-wizard');
         $lines[] = '';
         $lines[] = sprintf(__('Post ID: %d', 'article-import-wizard'), $post_id);
         $lines[] = sprintf(__('Title: %s', 'article-import-wizard'), $post->post_title);

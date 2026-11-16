@@ -17,6 +17,7 @@ Print this page and keep it next to your workstation.
 - Membership number must be correct.
 - The logged-in editor is internal only.
 - Public author is always the member from membership number.
+- To update an article, upload it again with the same title and membership number. Title and author cannot change; text, pictures, categories and bio are replaced. Only upload pictures that changed.
 
 ## 3) Metadata Tags (inside DOCX)
 Use these tags exactly as written.

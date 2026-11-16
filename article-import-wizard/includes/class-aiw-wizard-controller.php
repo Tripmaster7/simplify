@@ -291,6 +291,24 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('Title and content are required (either manually or from DOCX).', 'article-import-wizard'));
         }
 
+        // Re-upload of an already imported article: same title and same author. Title, author and
+        // status of the existing article stay as they are; everything else is updated.
+        $match_count = 0;
+        $existing_article = $this->find_existing_article($post_title, (int) $attributed_author->ID, $match_count);
+        if ($existing_article instanceof WP_Post) {
+            if (!current_user_can('edit_post', $existing_article->ID)) {
+                $this->redirect_with_error(sprintf(
+                    /* translators: 1: post ID, 2: post title */
+                    __('This upload matches the existing article #%1$d "%2$s", which you are not allowed to edit. Please ask an editor to import the update.', 'article-import-wizard'),
+                    $existing_article->ID,
+                    $existing_article->post_title
+                ));
+            }
+
+            $metadata_warnings = array_merge($metadata_warnings, $this->describe_update_risks($existing_article, $match_count));
+            $post_title = $existing_article->post_title;
+        }
+
         // All validation passed: only now perform side effects (new terms, media uploads).
         if (!empty($new_category_names)) {
             $created_category_ids = $this->create_categories_from_names($new_category_names);
@@ -313,7 +331,13 @@ class AIW_Wizard_Controller
         $author_image_id = $this->upload_single_image('aiw_author_image', 0, $upload_warnings);
         $metadata_warnings = array_merge($metadata_warnings, $upload_warnings);
 
-        $image_map = $this->build_inline_image_map($inline_image_ids);
+        // On an update, picture slots without a new upload keep the picture they had before.
+        $previous_inline_slots = $existing_article instanceof WP_Post ? $this->get_inline_image_slots($existing_article->ID) : [];
+        $inline_image_slots = $inline_image_ids + $previous_inline_slots;
+        ksort($inline_image_slots);
+        $reused_image_slots = array_keys(array_diff_key($previous_inline_slots, $inline_image_ids));
+
+        $image_map = $this->build_inline_image_map($inline_image_slots);
         $missing_image_slots = [];
         $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots);
 
@@ -396,6 +420,10 @@ class AIW_Wizard_Controller
             'broken_link_mode' => $broken_link_mode,
             'headline_image_id' => (int) $headline_image_id,
             'inline_image_ids' => array_map('intval', $inline_image_ids),
+            'inline_image_slots' => array_map('intval', $inline_image_slots),
+            'reused_image_slots' => $reused_image_slots,
+            'update_post_id' => $existing_article instanceof WP_Post ? (int) $existing_article->ID : 0,
+            'update_post_status' => $existing_article instanceof WP_Post ? (string) $existing_article->post_status : '',
             'author_image_id' => (int) $author_image_id,
             'final_author_image_id' => (int) $final_author_image_id,
             'submitted_author_bio' => $submitted_author_bio,
@@ -411,7 +439,118 @@ class AIW_Wizard_Controller
         $token = wp_generate_password(20, false, false);
         $this->store_preview_data($token, $preview_payload);
 
-        $this->redirect_to_preview($token, __('Preview generated. Review and confirm draft creation.', 'article-import-wizard'));
+        $this->redirect_to_preview(
+            $token,
+            $existing_article instanceof WP_Post
+                ? __('Preview generated. This upload updates an existing article. Review and confirm the update.', 'article-import-wizard')
+                : __('Preview generated. Review and confirm draft creation.', 'article-import-wizard')
+        );
+    }
+
+    /**
+     * Find a previously imported article with the same title (ignoring case and whitespace) by the
+     * same author. Trashed articles are ignored. If several match, the most recently modified wins.
+     */
+    private function find_existing_article(string $title, int $author_id, int &$match_count): ?WP_Post
+    {
+        $match_count = 0;
+        $wanted = $this->normalize_title_for_match($title);
+        if ($wanted === '' || $author_id <= 0) {
+            return null;
+        }
+
+        $candidates = get_posts([
+            'post_type' => 'post',
+            'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+            'author' => $author_id,
+            'meta_key' => '_aiw_imported',
+            'meta_value' => '1',
+            'posts_per_page' => -1,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'no_found_rows' => true,
+            'suppress_filters' => true,
+        ]);
+
+        $match = null;
+        foreach ($candidates as $candidate) {
+            if ($candidate instanceof WP_Post && $this->normalize_title_for_match($candidate->post_title) === $wanted) {
+                $match_count++;
+                $match ??= $candidate;
+            }
+        }
+
+        return $match;
+    }
+
+    private function normalize_title_for_match(string $title): string
+    {
+        $title = html_entity_decode($title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $title = (string) preg_replace('/\s+/u', ' ', $title);
+
+        return mb_strtolower(trim($title));
+    }
+
+    /**
+     * Preview warnings that tell the editor what confirming the update will do.
+     *
+     * @return string[]
+     */
+    private function describe_update_risks(WP_Post $article, int $match_count): array
+    {
+        $warnings = [];
+
+        if ($match_count > 1) {
+            $warnings[] = sprintf(
+                /* translators: 1: number of matching articles, 2: post ID that will be updated */
+                __('%1$d imported articles have this title and author. The most recently changed one (#%2$d) will be updated.', 'article-import-wizard'),
+                $match_count,
+                $article->ID
+            );
+        }
+
+        if (in_array($article->post_status, ['publish', 'private'], true)) {
+            $warnings[] = __('This article is published. Confirming changes it live; the previous version is kept as a revision.', 'article-import-wizard');
+        }
+
+        $last_import = (string) get_post_meta($article->ID, '_aiw_updated_at', true);
+        if ($last_import === '') {
+            $last_import = (string) get_post_meta($article->ID, '_aiw_imported_at', true);
+        }
+
+        $last_import_time = $last_import !== '' ? strtotime($last_import) : false;
+        $modified_time = strtotime($article->post_modified_gmt . ' UTC');
+        if ($last_import_time !== false && $modified_time !== false && $modified_time > $last_import_time + 60) {
+            $warnings[] = sprintf(
+                /* translators: %s: date and time of the last manual edit */
+                __('The article was edited in WordPress on %s, after its last import. Those edits will be overwritten; they stay available as a revision.', 'article-import-wizard'),
+                mysql2date(get_option('date_format') . ' ' . get_option('time_format'), $article->post_modified)
+            );
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * @return array<int,int> Inline picture attachment IDs by slot number, as saved on the article.
+     */
+    private function get_inline_image_slots(int $post_id): array
+    {
+        $stored = get_post_meta($post_id, '_aiw_inline_image_slots', true);
+        if (!is_array($stored)) {
+            return [];
+        }
+
+        $slots = [];
+        foreach ($stored as $slot => $attachment_id) {
+            $slot = (int) $slot;
+            $attachment_id = (int) $attachment_id;
+            if ($slot > 0 && $attachment_id > 0 && get_post_type($attachment_id) === 'attachment') {
+                $slots[$slot] = $attachment_id;
+            }
+        }
+
+        return $slots;
     }
 
     public function handle_create_draft(): void
@@ -455,29 +594,55 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('At least one category is required. Please generate preview again.', 'article-import-wizard'));
         }
 
-        $post_data = [
-            'post_type' => 'post',
-            'post_status' => 'draft',
-            'post_title' => (string) $preview['post_title'],
-            'post_content' => (string) $preview['working_content'],
-            'post_author' => $attributed_author_user_id,
-            'post_category' => $category_ids,
-        ];
+        $update_post_id = isset($preview['update_post_id']) ? (int) $preview['update_post_id'] : 0;
+        $is_update = $update_post_id > 0 && empty($_POST['aiw_create_new']);
+
+        if ($is_update) {
+            // Re-check at confirmation time: the article may have been trashed, reassigned or locked
+            // for this user since the preview was generated.
+            $existing = get_post($update_post_id);
+            if (
+                !$existing instanceof WP_Post
+                || $existing->post_status === 'trash'
+                || (int) $existing->post_author !== $attributed_author_user_id
+                || !current_user_can('edit_post', $update_post_id)
+            ) {
+                $this->redirect_with_error(__('The article to update is no longer available or you may not edit it. Please generate the preview again.', 'article-import-wizard'));
+            }
+
+            // Title, author and status are immutable on update; only these fields change.
+            $post_data = [
+                'ID' => $update_post_id,
+                'post_content' => (string) $preview['working_content'],
+                'post_category' => $category_ids,
+            ];
+        } else {
+            $post_data = [
+                'post_type' => 'post',
+                'post_status' => 'draft',
+                'post_title' => (string) $preview['post_title'],
+                'post_content' => (string) $preview['working_content'],
+                'post_author' => $attributed_author_user_id,
+                'post_category' => $category_ids,
+            ];
+        }
 
         // The writing date becomes the post date. Setting post_date_gmt explicitly fixes the date on
-        // the draft; otherwise WordPress would replace it with the publish date.
+        // a draft; otherwise WordPress would replace it with the publish date. On an update without
+        // a writing date, the existing date is kept.
         $post_date = isset($preview['post_date']) ? (string) $preview['post_date'] : '';
         if ($post_date !== '' && $this->is_valid_iso_date($post_date)) {
             $post_data['post_date'] = $post_date . ' 00:00:00';
             $post_data['post_date_gmt'] = get_gmt_from_date($post_data['post_date']);
+            $post_data['edit_date'] = true;
         }
 
-        $post_id = wp_insert_post($post_data, true);
+        $post_id = $is_update ? wp_update_post($post_data, true) : wp_insert_post($post_data, true);
 
-        if (is_wp_error($post_id)) {
+        if (is_wp_error($post_id) || (int) $post_id <= 0) {
             // Give the editor the chance to retry without re-uploading everything.
             $this->store_preview_data($preview_token, $preview);
-            $this->redirect_with_error($post_id->get_error_message());
+            $this->redirect_with_error(is_wp_error($post_id) ? $post_id->get_error_message() : __('The article could not be saved.', 'article-import-wizard'));
         }
 
         $headline_image_id = isset($preview['headline_image_id']) ? (int) $preview['headline_image_id'] : 0;
@@ -511,8 +676,16 @@ class AIW_Wizard_Controller
         update_post_meta($post_id, '_aiw_imported', 1);
         update_post_meta($post_id, '_aiw_import_status', 'completed');
         update_post_meta($post_id, '_aiw_attributed_author_user_id', $attributed_author_user_id);
-        update_post_meta($post_id, '_aiw_imported_by_user_id', (int) $operator_user_id);
-        update_post_meta($post_id, '_aiw_imported_at', gmdate('c'));
+        if ($is_update) {
+            // The original importer and import time are kept for the audit trail.
+            update_post_meta($post_id, '_aiw_updated_by_user_id', (int) $operator_user_id);
+            update_post_meta($post_id, '_aiw_updated_at', gmdate('c'));
+            update_post_meta($post_id, '_aiw_update_count', (int) get_post_meta($post_id, '_aiw_update_count', true) + 1);
+        } else {
+            update_post_meta($post_id, '_aiw_imported_by_user_id', (int) $operator_user_id);
+            update_post_meta($post_id, '_aiw_imported_at', gmdate('c'));
+        }
+        update_post_meta($post_id, '_aiw_inline_image_slots', isset($preview['inline_image_slots']) && is_array($preview['inline_image_slots']) ? array_map('intval', $preview['inline_image_slots']) : []);
         update_post_meta($post_id, '_aiw_doc_source_filename', isset($preview['source_filename']) ? (string) $preview['source_filename'] : '');
         update_post_meta($post_id, '_aiw_validation_report', wp_json_encode($validation_report));
         update_post_meta($post_id, '_aiw_restriction_shortcode_start', isset($preview['restriction_start']) ? (string) $preview['restriction_start'] : '');
@@ -526,11 +699,14 @@ class AIW_Wizard_Controller
             'attributed_author' => isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : '',
             'invalid_links' => isset($preview['invalid_links_count']) ? (int) $preview['invalid_links_count'] : 0,
             'operator_user_id' => (int) $operator_user_id,
+            'updated' => $is_update,
         ]);
 
         $edit_url = get_edit_post_link($post_id, '');
         $message = sprintf(
-            __('Draft #%1$s created. Attributed author: %2$s', 'article-import-wizard'),
+            $is_update
+                ? __('Article #%1$s updated. Attributed author: %2$s', 'article-import-wizard')
+                : __('Draft #%1$s created. Attributed author: %2$s', 'article-import-wizard'),
             $post_id,
             isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : ''
         );

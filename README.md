@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.0.2
+**Current version:** 1.1.0
 
 **Author:** GitHub Copilot and Jens
 
@@ -49,6 +49,23 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 7. Confirm to create the draft and send the notification email.
 
 Preview data is temporary. If it expires, generate a new preview before creating the draft. Images uploaded for a preview that never becomes a draft are deleted automatically by a daily cleanup task after 24 hours.
+
+## Updating an Article
+
+Uploading an article again updates the existing one instead of creating a duplicate. An upload matches an earlier import when it has the same title (ignoring upper/lower case and extra spaces) and the same author (membership number). Trashed articles are not matched.
+
+On an update:
+
+- **Unchanged:** title, author and status. A draft stays a draft; a published article stays published.
+- **Replaced:** article text, categories (the wizard selection), restriction placement, and the bio in the bio box (and on the author's profile).
+- **Pictures:** a newly uploaded picture replaces that slot; slots without a new upload keep their previous picture. A new headline picture replaces the featured image; otherwise it is kept.
+- **Post date:** set from `[WRITING_DATE]` if present, otherwise kept.
+
+The preview names the article that will be updated and warns when it is published (the change goes live on confirmation), when it was edited in WordPress after its last import (those edits are overwritten), or when several articles match (the most recently changed one is used). WordPress keeps the previous version as a revision. The editor can tick **Create as a new article instead** to leave the existing article untouched, and needs permission to edit the matched article.
+
+Articles imported before version 1.1.0 have no saved picture slots, so all pictures must be uploaded again on their first update.
+
+The update is recorded in `_aiw_updated_at`, `_aiw_updated_by_user_id` and `_aiw_update_count`; the original `_aiw_imported_at` and `_aiw_imported_by_user_id` are kept.
 
 ## DOCX Markers
 
@@ -148,4 +165,4 @@ The detailed implementation blueprint is available in [wordpress-article-importe
 - DOCX parsing is intentionally based on structured paragraphs and markers; it is not a general-purpose Word-to-HTML converter. Bold, italic, links and lists are kept; underline, colours, fonts, tables and text boxes are not. Markdown syntax is not interpreted.
 - Link checks run during preview generation, so documents with many links can take longer to process.
 - Hyperlinks inserted with Word's link feature are imported as links and checked. Only `http`, `https` and `mailto` targets become links; links to bookmarks inside the document, and any other target, are kept as plain text.
-- Imports create new drafts rather than updating existing posts.
+- Updates match on title and author only. Changing the title in the document creates a new article.
