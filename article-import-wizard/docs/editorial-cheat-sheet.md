@@ -24,7 +24,7 @@ Diese Tags exakt so verwenden.
 Pflicht oder dringend empfohlen:
 - [TITLE: Ihre Überschrift]
 - [SUBTITLE: Ihre Unterzeile]
-- [WRITING_DATE: 2026-08-04]
+- [WRITING_DATE: 2026-08-04] (wird das Beitragsdatum; 04.08.2026 geht auch)
 - [AUTHOR_MEMBERSHIP: 01234]
 
 Optional:

@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Article Import Wizard 1.0.0\n"
+"Project-Id-Version: Article Import Wizard 1.0.1\n"
 "POT-Creation-Date: 2026-08-04 12:30+0000\n"
 "PO-Revision-Date: 2026-08-04 12:30+0000\n"
 "Last-Translator: GitHub Copilot and Jens\n"
@@ -333,3 +333,25 @@ msgstr "Erforderlich. Wird am [RESTRICT]-Marker eingefügt, sonst automatisch na
 #: includes/class-aiw-settings.php
 msgid "Required. Always inserted after the last paragraph, before the author bio, so the bio stays public."
 msgstr "Erforderlich. Wird immer nach dem letzten Absatz und vor der Autoren-Bio eingefügt, damit die Bio öffentlich bleibt."
+
+#: includes/class-aiw-wizard-controller.php
+#, php-format
+msgid "[WRITING_DATE: %s] is not a valid date, so the post date was not set. Use the format 2025-01-15 or 15.01.2025."
+msgstr "[WRITING_DATE: %s] ist kein gültiges Datum, daher wurde das Beitragsdatum nicht gesetzt. Verwenden Sie das Format 2025-01-15 oder 15.01.2025."
+
+#: includes/class-aiw-wizard-controller.php
+#, php-format
+msgid "The writing date %s is in the future. Publishing the draft will schedule it for that date."
+msgstr "Das Schreibdatum %s liegt in der Zukunft. Beim Veröffentlichen wird der Entwurf für dieses Datum geplant."
+
+#: templates/wizard-step-upload.php
+msgid "Post Date"
+msgstr "Beitragsdatum"
+
+#: templates/wizard-step-upload.php
+msgid "from [WRITING_DATE]"
+msgstr "aus [WRITING_DATE]"
+
+#: templates/wizard-step-upload.php
+msgid "Not set. The publish date will be used."
+msgstr "Nicht gesetzt. Es wird das Veröffentlichungsdatum verwendet."

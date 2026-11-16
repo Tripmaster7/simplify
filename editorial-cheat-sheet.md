@@ -24,7 +24,7 @@ Use these tags exactly as written.
 Required or strongly recommended:
 - [TITLE: Your headline]
 - [SUBTITLE: Your sub-headline]
-- [WRITING_DATE: 2026-08-04]
+- [WRITING_DATE: 2026-08-04] (becomes the post date; 04.08.2026 also works)
 - [AUTHOR_MEMBERSHIP: 01234]
 
 Optional:

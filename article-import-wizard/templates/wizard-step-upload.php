@@ -71,6 +71,17 @@ if (!defined('ABSPATH')) {
                     <td><?php echo esc_html(isset($preview_data['travel_date']) ? (string) $preview_data['travel_date'] : ''); ?></td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e('Post Date', 'article-import-wizard'); ?></th>
+                    <td>
+                        <?php if (!empty($preview_data['post_date'])) : ?>
+                            <?php echo esc_html(date_i18n(get_option('date_format'), strtotime((string) $preview_data['post_date']))); ?>
+                            <span class="description">(<?php esc_html_e('from [WRITING_DATE]', 'article-import-wizard'); ?>)</span>
+                        <?php else : ?>
+                            <?php esc_html_e('Not set. The publish date will be used.', 'article-import-wizard'); ?>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e('Source Document', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['source_filename']); ?></td>
                 </tr>
@@ -256,6 +267,10 @@ if (!defined('ABSPATH')) {
                         return;
                     }
 
+                    // Upload rows are created once and never removed, so files that were already chosen
+                    // survive any change of the count (including the moment the field is empty while
+                    // typing a new number). Rows above the count are hidden and disabled; disabled file
+                    // inputs are not submitted.
                     function renderInlineImageInputs() {
                         var count = parseInt(countInput.value || '0', 10);
                         if (isNaN(count) || count < 0) {
@@ -265,9 +280,7 @@ if (!defined('ABSPATH')) {
                             count = 20;
                         }
 
-                        container.innerHTML = '';
-
-                        for (var i = 1; i <= count; i++) {
+                        for (var i = container.children.length + 1; i <= count; i++) {
                             var wrapper = document.createElement('div');
                             wrapper.className = 'aiw-inline-upload-row';
 
@@ -284,6 +297,13 @@ if (!defined('ABSPATH')) {
                             wrapper.appendChild(label);
                             wrapper.appendChild(input);
                             container.appendChild(wrapper);
+                        }
+
+                        for (var slot = 1; slot <= container.children.length; slot++) {
+                            var row = container.children[slot - 1];
+                            var active = slot <= count;
+                            row.hidden = !active;
+                            row.querySelector('input').disabled = !active;
                         }
                     }
 

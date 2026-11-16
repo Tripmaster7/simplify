@@ -250,6 +250,27 @@ class AIW_Wizard_Controller
             }
         }
 
+        // [WRITING_DATE: ...] becomes the post date. Without the marker WordPress uses the publish date.
+        $post_date = '';
+        if (!empty($doc_metadata['writing_date'])) {
+            $raw_writing_date = trim((string) $doc_metadata['writing_date']);
+            $post_date = $this->parse_writing_date($raw_writing_date);
+
+            if ($post_date === '') {
+                $metadata_warnings[] = sprintf(
+                    /* translators: %s: the date text found in the DOCX */
+                    __('[WRITING_DATE: %s] is not a valid date, so the post date was not set. Use the format 2025-01-15 or 15.01.2025.', 'article-import-wizard'),
+                    $raw_writing_date
+                );
+            } elseif ($post_date > current_time('Y-m-d')) {
+                $metadata_warnings[] = sprintf(
+                    /* translators: %s: post date */
+                    __('The writing date %s is in the future. Publishing the draft will schedule it for that date.', 'article-import-wizard'),
+                    $post_date
+                );
+            }
+        }
+
         if ($post_title === '' && !empty($doc_parse['title'])) {
             $post_title = $this->normalize_title_text((string) $doc_parse['title']);
         }
@@ -351,7 +372,7 @@ class AIW_Wizard_Controller
             'unchecked_links' => $link_validation['skipped'],
             'missing_image_slots' => array_values(array_unique($missing_image_slots)),
             'broken_link_mode' => $broken_link_mode,
-            'writing_date' => isset($doc_parse['writing_date']) ? (string) $doc_parse['writing_date'] : '',
+            'writing_date' => $post_date,
             'doc_author' => isset($doc_parse['doc_author']) ? (string) $doc_parse['doc_author'] : '',
             'metadata_warnings' => $metadata_warnings,
         ];
@@ -363,6 +384,7 @@ class AIW_Wizard_Controller
             'operator_user_id' => (int) $operator_user_id,
             'post_title' => $post_title,
             'travel_date' => $travel_date,
+            'post_date' => $post_date,
             'working_content' => $working_content,
             'restriction_start' => $restriction_start,
             'restriction_end' => $restriction_end,
@@ -429,14 +451,24 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('At least one category is required. Please generate preview again.', 'article-import-wizard'));
         }
 
-        $post_id = wp_insert_post([
+        $post_data = [
             'post_type' => 'post',
             'post_status' => 'draft',
             'post_title' => (string) $preview['post_title'],
             'post_content' => (string) $preview['working_content'],
             'post_author' => $attributed_author_user_id,
             'post_category' => $category_ids,
-        ], true);
+        ];
+
+        // The writing date becomes the post date. Setting post_date_gmt explicitly fixes the date on
+        // the draft; otherwise WordPress would replace it with the publish date.
+        $post_date = isset($preview['post_date']) ? (string) $preview['post_date'] : '';
+        if ($post_date !== '' && $this->is_valid_iso_date($post_date)) {
+            $post_data['post_date'] = $post_date . ' 00:00:00';
+            $post_data['post_date_gmt'] = get_gmt_from_date($post_data['post_date']);
+        }
+
+        $post_id = wp_insert_post($post_data, true);
 
         if (is_wp_error($post_id)) {
             // Give the editor the chance to retry without re-uploading everything.
@@ -510,6 +542,30 @@ class AIW_Wizard_Controller
     private function is_valid_membership_number(string $membership_number): bool
     {
         return preg_match('/^0\d{4}$/', $membership_number) === 1;
+    }
+
+    /**
+     * Parse a [WRITING_DATE] value into Y-m-d. Accepts 2025-01-15, 15.01.2025 / 15.1.2025, and an
+     * ISO date-time such as 2025-01-15T10:30:00Z (the time is ignored).
+     * Returns '' when the value is not a real calendar date.
+     */
+    private function parse_writing_date(string $value): string
+    {
+        $value = trim($value);
+
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/', $value, $parts) === 1) {
+            [$year, $month, $day] = [(int) $parts[1], (int) $parts[2], (int) $parts[3]];
+        } elseif (preg_match('/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/', $value, $parts) === 1) {
+            [$day, $month, $year] = [(int) $parts[1], (int) $parts[2], (int) $parts[3]];
+        } else {
+            return '';
+        }
+
+        if (!checkdate($month, $day, $year)) {
+            return '';
+        }
+
+        return sprintf('%04d-%02d-%02d', $year, $month, $day);
     }
 
     private function is_valid_iso_date(string $date): bool

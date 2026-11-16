@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.0.0
+**Current version:** 1.0.1
 
 **Author:** GitHub Copilot and Jens
 
@@ -79,6 +79,8 @@ Use numbered image placeholders where inline images should appear:
 [Bild 2: Optional caption]
 [Image 3]
 ```
+
+`[WRITING_DATE: ...]` becomes the post date. It accepts `2025-01-15` or `15.01.2025`; an invalid or future date is reported in the preview. Without the marker, WordPress uses the publish date.
 
 The first valid metadata value wins. Duplicate values and a membership number that differs from the wizard entry are reported as preview warnings. The wizard membership number remains the source of truth.
 
