@@ -6,30 +6,48 @@ if (!defined('ABSPATH')) {
 
 class AIW_Wizard_Controller
 {
+    public const MAX_INLINE_IMAGE_SLOTS = 20;
+
+    /**
+     * Without a [RESTRICT] marker the restricted part starts after this many text paragraphs...
+     */
+    private const AUTO_RESTRICTION_PARAGRAPHS = 2;
+
+    /**
+     * ...or earlier, after the paragraph in which the article text reaches this many characters.
+     */
+    private const AUTO_RESTRICTION_CHARACTERS = 1000;
+
+    /**
+     * Post meta set on media uploaded during preview; removed once the media is attached to a draft.
+     */
+    public const PREVIEW_UPLOAD_META = '_aiw_preview_upload';
+
+    public const CLEANUP_HOOK = 'aiw_cleanup_preview_uploads';
+
+    /**
+     * Preview transients live for 2 hours; unattached uploads older than this are safe to delete.
+     */
+    private const PREVIEW_UPLOAD_MAX_AGE = DAY_IN_SECONDS;
+
     private AIW_Author_Service $author_service;
     private AIW_DOCX_Parser $docx_parser;
     private AIW_Image_Mapper $image_mapper;
     private AIW_Link_Validator $link_validator;
-    private AIW_Content_Builder $content_builder;
     private AIW_Notifier $notifier;
-    private AIW_Shortcode_Service $shortcode_service;
 
     public function __construct(
         AIW_Author_Service $author_service,
         AIW_DOCX_Parser $docx_parser,
         AIW_Image_Mapper $image_mapper,
         AIW_Link_Validator $link_validator,
-        AIW_Content_Builder $content_builder,
-        AIW_Notifier $notifier,
-        AIW_Shortcode_Service $shortcode_service
+        AIW_Notifier $notifier
     ) {
         $this->author_service = $author_service;
         $this->docx_parser = $docx_parser;
         $this->image_mapper = $image_mapper;
         $this->link_validator = $link_validator;
-        $this->content_builder = $content_builder;
         $this->notifier = $notifier;
-        $this->shortcode_service = $shortcode_service;
     }
 
     public function register(): void
@@ -37,6 +55,35 @@ class AIW_Wizard_Controller
         add_action('admin_post_aiw_preview_import', [$this, 'handle_preview_import']);
         add_action('admin_post_aiw_create_draft', [$this, 'handle_create_draft']);
         add_action('wp_ajax_aiw_validate_membership', [$this, 'handle_validate_membership']);
+        add_action(self::CLEANUP_HOOK, [$this, 'cleanup_abandoned_preview_uploads']);
+    }
+
+    /**
+     * Delete media that was uploaded for a preview which never became a draft
+     * (preview regenerated, expired, or abandoned).
+     */
+    public function cleanup_abandoned_preview_uploads(): void
+    {
+        $attachment_ids = get_posts([
+            'post_type' => 'attachment',
+            'post_status' => 'inherit',
+            'post_parent' => 0,
+            'posts_per_page' => 100,
+            'fields' => 'ids',
+            'no_found_rows' => true,
+            'meta_query' => [
+                [
+                    'key' => self::PREVIEW_UPLOAD_META,
+                    'value' => time() - self::PREVIEW_UPLOAD_MAX_AGE,
+                    'compare' => '<',
+                    'type' => 'NUMERIC',
+                ],
+            ],
+        ]);
+
+        foreach ($attachment_ids as $attachment_id) {
+            wp_delete_attachment((int) $attachment_id, true);
+        }
     }
 
     public function handle_validate_membership(): void
@@ -114,21 +161,34 @@ class AIW_Wizard_Controller
             ? wp_kses_post(wp_unslash($_POST['aiw_post_content']))
             : '';
 
-        $restriction_start = isset($_POST['aiw_restriction_start'])
+        $restriction_start = trim(isset($_POST['aiw_restriction_start'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_restriction_start']))
-            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, '[restrict]');
+            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_START, AIW_Settings::DEFAULT_RESTRICTION_START));
 
-        $restriction_end = isset($_POST['aiw_restriction_end'])
+        $restriction_end = trim(isset($_POST['aiw_restriction_end'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_restriction_end']))
-            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, '[/restrict]');
+            : AIW_Settings::get_option_string(AIW_Settings::OPTION_RESTRICTION_END, AIW_Settings::DEFAULT_RESTRICTION_END));
+
+        // Every article is restricted and every restriction must be closed before the public bio.
+        if ($restriction_end === '') {
+            $restriction_end = AIW_Settings::closing_shortcode_for($restriction_start);
+        }
+
+        if ($restriction_start === '' || $restriction_end === '') {
+            $this->redirect_with_error(__('The restriction start and end shortcodes are required. Please set them under Settings > Article Import Wizard.', 'article-import-wizard'));
+        }
 
         $inline_image_count = isset($_POST['aiw_inline_image_count'])
-            ? max(0, (int) wp_unslash($_POST['aiw_inline_image_count']))
+            ? (int) wp_unslash($_POST['aiw_inline_image_count'])
             : AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
+        $inline_image_count = max(0, min(self::MAX_INLINE_IMAGE_SLOTS, $inline_image_count));
 
         $broken_link_mode = isset($_POST['aiw_broken_link_mode'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_broken_link_mode']))
             : AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
+        if (!in_array($broken_link_mode, ['replace', 'flag_only'], true)) {
+            $broken_link_mode = 'replace';
+        }
 
         $submitted_author_bio = isset($_POST['aiw_author_bio'])
             ? sanitize_textarea_field(wp_unslash($_POST['aiw_author_bio']))
@@ -136,17 +196,8 @@ class AIW_Wizard_Controller
 
         $category_ids = $this->extract_category_ids_from_post();
         $new_category_names = $this->extract_new_category_names_from_post();
-        if (!empty($new_category_names)) {
-            if (!current_user_can('manage_categories')) {
-                $this->redirect_with_error(__('You do not have permission to create categories.', 'article-import-wizard'));
-            }
-
-            $created_category_ids = $this->create_categories_from_names($new_category_names);
-            if (is_wp_error($created_category_ids)) {
-                $this->redirect_with_error($created_category_ids->get_error_message());
-            }
-
-            $category_ids = array_values(array_unique(array_merge($category_ids, $created_category_ids)));
+        if (!empty($new_category_names) && !current_user_can('manage_categories')) {
+            $this->redirect_with_error(__('You do not have permission to create categories.', 'article-import-wizard'));
         }
 
         if ($membership_number === '') {
@@ -161,7 +212,7 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('Please select a valid travel date.', 'article-import-wizard'));
         }
 
-        if (empty($category_ids)) {
+        if (empty($category_ids) && empty($new_category_names)) {
             $this->redirect_with_error(__('Please select at least one category.', 'article-import-wizard'));
         }
 
@@ -182,8 +233,21 @@ class AIW_Wizard_Controller
             $metadata_warnings[] = __('DOCX membership number does not match the wizard membership number.', 'article-import-wizard');
         }
 
-        if (empty($doc_metadata['restriction_anchor'])) {
-            $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
+        $duplicate_markers = [
+            'title' => 'TITLE',
+            'subtitle' => 'SUBTITLE',
+            'author_membership' => 'AUTHOR_MEMBERSHIP',
+            'writing_date' => 'WRITING_DATE',
+            'bio' => 'BIO',
+        ];
+        foreach ($duplicate_markers as $key => $marker) {
+            if (!empty($doc_metadata[$key . '_duplicate'])) {
+                $metadata_warnings[] = sprintf(
+                    /* translators: %s: DOCX marker name, e.g. TITLE */
+                    __('The DOCX contains more than one [%s] marker. The first value was used.', 'article-import-wizard'),
+                    $marker
+                );
+            }
         }
 
         if ($post_title === '' && !empty($doc_parse['title'])) {
@@ -202,17 +266,39 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('Title and content are required (either manually or from DOCX).', 'article-import-wizard'));
         }
 
+        // All validation passed: only now perform side effects (new terms, media uploads).
+        if (!empty($new_category_names)) {
+            $created_category_ids = $this->create_categories_from_names($new_category_names);
+            if (is_wp_error($created_category_ids)) {
+                $this->redirect_with_error($created_category_ids->get_error_message());
+            }
+
+            $category_ids = array_values(array_unique(array_merge($category_ids, $created_category_ids)));
+        }
+
+        if (empty($category_ids)) {
+            $this->redirect_with_error(__('Please select at least one category.', 'article-import-wizard'));
+        }
+
         $operator_user_id = get_current_user_id();
 
-        $headline_image_id = $this->upload_single_image('aiw_headline_image', 0);
-        $inline_image_ids = $this->upload_inline_images($inline_image_count, 0);
-        $author_image_id = $this->upload_single_image('aiw_author_image', 0);
+        $upload_warnings = [];
+        $headline_image_id = $this->upload_single_image('aiw_headline_image', 0, $upload_warnings);
+        $inline_image_ids = $this->upload_inline_images($inline_image_count, 0, $upload_warnings);
+        $author_image_id = $this->upload_single_image('aiw_author_image', 0, $upload_warnings);
+        $metadata_warnings = array_merge($metadata_warnings, $upload_warnings);
 
         $image_map = $this->build_inline_image_map($inline_image_ids);
         $missing_image_slots = [];
         $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots);
 
         $working_content = $this->build_restricted_article_body($content_with_images, $restriction_start, $metadata_warnings);
+
+        // A bio typed into the wizard wins; otherwise a [BIO: ...] marker from the DOCX is used.
+        // Either one is saved to the author's profile on draft creation.
+        if ($submitted_author_bio === '' && !empty($doc_metadata['bio'])) {
+            $submitted_author_bio = sanitize_textarea_field((string) $doc_metadata['bio']);
+        }
 
         $stored_author_bio = (string) get_user_meta((int) $attributed_author->ID, 'aiw_author_bio', true);
         $final_author_bio = $submitted_author_bio !== '' ? $submitted_author_bio : $stored_author_bio;
@@ -230,11 +316,20 @@ class AIW_Wizard_Controller
 
         $links = $this->extract_links_from_content($working_content);
         if (isset($doc_parse['links']) && is_array($doc_parse['links'])) {
-            $links = array_values(array_unique(array_merge($links, $doc_parse['links'])));
+            $links = array_merge($links, $doc_parse['links']);
         }
+        $links = AIW_Link_Validator::normalize_links($links);
 
         $timeout_ms = AIW_Settings::get_option_int(AIW_Settings::OPTION_LINK_CHECK_TIMEOUT, 6000);
         $link_validation = $this->link_validator->validate_links($links, $timeout_ms);
+
+        if (!empty($link_validation['skipped'])) {
+            $metadata_warnings[] = sprintf(
+                /* translators: %d: number of links that were not checked */
+                __('%d link(s) were not checked because the link check took too long. Please check them manually.', 'article-import-wizard'),
+                count($link_validation['skipped'])
+            );
+        }
 
         $invalid_urls = [];
         foreach ($link_validation['invalid'] as $invalid_entry) {
@@ -253,6 +348,7 @@ class AIW_Wizard_Controller
 
         $validation_report = [
             'invalid_links' => $link_validation['invalid'],
+            'unchecked_links' => $link_validation['skipped'],
             'missing_image_slots' => array_values(array_unique($missing_image_slots)),
             'broken_link_mode' => $broken_link_mode,
             'writing_date' => isset($doc_parse['writing_date']) ? (string) $doc_parse['writing_date'] : '',
@@ -313,9 +409,16 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('Preview data expired. Please run preview again.', 'article-import-wizard'));
         }
 
+        // Claim the preview before doing any work so a double-submitted form cannot create two drafts.
+        $this->delete_preview_data($preview_token);
+
         $operator_user_id = get_current_user_id();
 
         $attributed_author_user_id = isset($preview['attributed_author_user_id']) ? (int) $preview['attributed_author_user_id'] : 0;
+        if ($attributed_author_user_id <= 0) {
+            $this->redirect_with_error(__('Attributed author is missing in preview payload.', 'article-import-wizard'));
+        }
+
         $category_ids = isset($preview['category_ids']) && is_array($preview['category_ids'])
             ? array_values(array_filter(array_map('intval', $preview['category_ids']), static function (int $id): bool {
                 return $id > 0;
@@ -331,20 +434,19 @@ class AIW_Wizard_Controller
             'post_status' => 'draft',
             'post_title' => (string) $preview['post_title'],
             'post_content' => (string) $preview['working_content'],
-            'post_author' => $attributed_author_user_id > 0 ? $attributed_author_user_id : $operator_user_id,
+            'post_author' => $attributed_author_user_id,
             'post_category' => $category_ids,
         ], true);
 
         if (is_wp_error($post_id)) {
+            // Give the editor the chance to retry without re-uploading everything.
+            $this->store_preview_data($preview_token, $preview);
             $this->redirect_with_error($post_id->get_error_message());
         }
 
         $headline_image_id = isset($preview['headline_image_id']) ? (int) $preview['headline_image_id'] : 0;
         if ($headline_image_id > 0) {
-            wp_update_post([
-                'ID' => $headline_image_id,
-                'post_parent' => (int) $post_id,
-            ]);
+            $this->attach_preview_upload($headline_image_id, (int) $post_id);
             set_post_thumbnail($post_id, $headline_image_id);
         }
 
@@ -352,15 +454,7 @@ class AIW_Wizard_Controller
             ? $preview['inline_image_ids']
             : [];
         foreach ($inline_image_ids as $inline_image_id) {
-            wp_update_post([
-                'ID' => (int) $inline_image_id,
-                'post_parent' => (int) $post_id,
-            ]);
-        }
-
-        $attributed_author_user_id = isset($preview['attributed_author_user_id']) ? (int) $preview['attributed_author_user_id'] : 0;
-        if ($attributed_author_user_id <= 0) {
-            $this->redirect_with_error(__('Attributed author is missing in preview payload.', 'article-import-wizard'));
+            $this->attach_preview_upload((int) $inline_image_id, (int) $post_id);
         }
 
         $submitted_author_bio = isset($preview['submitted_author_bio']) ? (string) $preview['submitted_author_bio'] : '';
@@ -370,10 +464,7 @@ class AIW_Wizard_Controller
 
         $author_image_id = isset($preview['author_image_id']) ? (int) $preview['author_image_id'] : 0;
         if ($author_image_id > 0) {
-            wp_update_post([
-                'ID' => $author_image_id,
-                'post_parent' => (int) $post_id,
-            ]);
+            $this->attach_preview_upload($author_image_id, (int) $post_id);
             update_user_meta($attributed_author_user_id, 'aiw_author_image_id', $author_image_id);
         }
 
@@ -400,8 +491,6 @@ class AIW_Wizard_Controller
             'invalid_links' => isset($preview['invalid_links_count']) ? (int) $preview['invalid_links_count'] : 0,
             'operator_user_id' => (int) $operator_user_id,
         ]);
-
-        $this->delete_preview_data($preview_token);
 
         $edit_url = get_edit_post_link($post_id, '');
         $message = sprintf(
@@ -497,58 +586,101 @@ class AIW_Wizard_Controller
         }
         $bio_html .= '</div></div>';
 
-        $bio_block = $this->wrap_raw_html_block($bio_html);
-
-        $restriction_end_markup = '';
-        if ($restriction_end !== '') {
-            $restriction_end_markup = $this->wrap_shortcode_block($restriction_end);
+        // The restricted part always ends right after the article body; the bio box is always public.
+        $parts = [];
+        if ($content !== '') {
+            $parts[] = $content;
         }
+        $parts[] = $this->wrap_shortcode_block($restriction_end);
+        $parts[] = $this->wrap_raw_html_block($bio_html);
 
-        if ($content === '') {
-            if ($restriction_end_markup !== '') {
-                return $restriction_end_markup . "\n\n" . $bio_block;
-            }
-
-            return $bio_block;
-        }
-
-        if ($restriction_end_markup !== '') {
-            return $content . "\n\n" . $restriction_end_markup . "\n\n" . $bio_block;
-        }
-
-        return $content . "\n\n" . $bio_block;
+        return implode("\n\n", $parts);
     }
 
-    private function apply_restriction_anchor(string $content, string $restriction_start): string
-    {
-        $restriction_start = trim($restriction_start);
-
-        if ($restriction_start === '') {
-            return $content;
-        }
-
-        if (stripos($content, '[RESTRICT]') !== false) {
-            $replacement = "\n\n<!-- wp:shortcode -->\n" . $restriction_start . "\n<!-- /wp:shortcode -->\n\n";
-            return str_ireplace('[RESTRICT]', $replacement, $content);
-        }
-
-        return $content;
-    }
-
+    /**
+     * Convert the article body to blocks and insert the restriction start shortcode: at the
+     * [RESTRICT] anchor if the document has one, otherwise automatically (see
+     * find_automatic_restriction_position()).
+     */
     private function build_restricted_article_body(string $content, string $restriction_start, array &$metadata_warnings): string
     {
-        $restriction_start = trim($restriction_start);
+        $start_block = $this->wrap_shortcode_block($restriction_start);
         $content = $this->normalize_restriction_markers($content);
 
-        if (!$this->contains_restriction_anchor($content)) {
-            $metadata_warnings[] = __('DOCX is missing the [RESTRICT] anchor.', 'article-import-wizard');
-            if ($restriction_start === '') {
-                return $this->convert_to_block_markup($content);
-            }
-
-            return $this->wrap_shortcode_block($restriction_start) . "\n\n" . $this->convert_to_block_markup($content);
+        $blocks = null;
+        if ($this->contains_restriction_anchor($content)) {
+            $blocks = $this->convert_to_blocks_at_anchor($content, $start_block);
         }
 
+        if ($blocks === null) {
+            $blocks = $this->convert_to_blocks($content);
+            [$insert_after, $paragraph_number] = $this->find_automatic_restriction_position($blocks);
+            array_splice($blocks, $insert_after + 1, 0, [$start_block]);
+
+            if ($paragraph_number > 0) {
+                $metadata_warnings[] = sprintf(
+                    /* translators: %d: paragraph number after which the restricted part starts */
+                    __('No [RESTRICT] marker found. The restricted part starts automatically after paragraph %d.', 'article-import-wizard'),
+                    $paragraph_number
+                );
+            }
+        }
+
+        if (end($blocks) === $start_block) {
+            $metadata_warnings[] = __('The restricted part is empty because nothing follows the restriction start. Add a [RESTRICT] marker earlier in the article.', 'article-import-wizard');
+        }
+
+        return implode("\n\n", $blocks);
+    }
+
+    /**
+     * Without a [RESTRICT] marker the restricted part starts after the 2nd text paragraph, or
+     * after the paragraph in which the text reaches AUTO_RESTRICTION_CHARACTERS characters,
+     * whichever comes first. Headings, images and lists are not counted.
+     *
+     * @param string[] $blocks
+     * @return array{0:int,1:int} Index of the block to insert after (-1 = at the top), and the
+     *                            number of the paragraph it follows (0 = no text paragraph found,
+     *                            in which case the start goes after the last block).
+     */
+    private function find_automatic_restriction_position(array $blocks): array
+    {
+        $paragraph_count = 0;
+        $characters = 0;
+        $last_paragraph_index = null;
+
+        foreach ($blocks as $index => $block) {
+            if (preg_match('/^<!--\s*wp:paragraph\b/', $block) !== 1) {
+                continue;
+            }
+
+            $text = trim(html_entity_decode(wp_strip_all_tags($block), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($text === '') {
+                continue;
+            }
+
+            $paragraph_count++;
+            $characters += mb_strlen($text);
+            $last_paragraph_index = $index;
+
+            if ($paragraph_count >= self::AUTO_RESTRICTION_PARAGRAPHS || $characters >= self::AUTO_RESTRICTION_CHARACTERS) {
+                return [$index, $paragraph_count];
+            }
+        }
+
+        if ($last_paragraph_index !== null) {
+            return [$last_paragraph_index, $paragraph_count];
+        }
+
+        return [count($blocks) - 1, 0];
+    }
+
+    /**
+     * @return string[]|null Blocks with the start shortcode at the anchor, or null if the anchor
+     *                       could not be located in an element.
+     */
+    private function convert_to_blocks_at_anchor(string $content, string $start_block): ?array
+    {
         $document = new DOMDocument('1.0', 'UTF-8');
         libxml_use_internal_errors(true);
         $document->loadHTML('<?xml encoding="utf-8" ?><div id="aiw-root">' . $content . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
@@ -556,7 +688,7 @@ class AIW_Wizard_Controller
 
         $root = $document->getElementById('aiw-root');
         if (!$root instanceof DOMElement) {
-            return $this->convert_to_block_markup($content);
+            return null;
         }
 
         $blocks = [];
@@ -568,7 +700,7 @@ class AIW_Wizard_Controller
             }
 
             if ($node instanceof DOMElement) {
-                $segments = $this->convert_dom_element_to_blocks_with_restriction($node, $restriction_start, $anchor_inserted);
+                $segments = $this->convert_dom_element_to_blocks_with_restriction($node, $start_block, $anchor_inserted);
                 $blocks = array_merge($blocks, $segments);
                 continue;
             }
@@ -581,16 +713,10 @@ class AIW_Wizard_Controller
             }
         }
 
-        if (!$anchor_inserted) {
-            if ($restriction_start !== '') {
-                array_unshift($blocks, $this->wrap_shortcode_block($restriction_start));
-            }
-        }
-
-        return implode("\n\n", $blocks);
+        return $anchor_inserted ? $blocks : null;
     }
 
-    private function convert_dom_element_to_blocks_with_restriction(DOMElement $node, string $restriction_start, bool &$anchor_inserted): array
+    private function convert_dom_element_to_blocks_with_restriction(DOMElement $node, string $start_block, bool &$anchor_inserted): array
     {
         $inner_html = $this->dom_node_inner_html($node);
         if (!$anchor_inserted && $this->contains_restriction_anchor($inner_html)) {
@@ -603,9 +729,7 @@ class AIW_Wizard_Controller
                 $blocks = array_merge($blocks, $this->convert_dom_element_to_blocks_from_html($node->tagName, $before_html, $node));
             }
 
-            if ($restriction_start !== '') {
-                $blocks[] = $this->wrap_shortcode_block($restriction_start);
-            }
+            $blocks[] = $start_block;
 
             if ($after_html !== '') {
                 $blocks = array_merge($blocks, $this->convert_dom_element_to_blocks_from_html($node->tagName, $after_html, $node));
@@ -652,11 +776,14 @@ class AIW_Wizard_Controller
         return "<!-- wp:shortcode -->\n" . $shortcode . "\n<!-- /wp:shortcode -->";
     }
 
-    private function convert_to_block_markup(string $content): string
+    /**
+     * @return string[]
+     */
+    private function convert_to_blocks(string $content): array
     {
         $content = trim($content);
         if ($content === '') {
-            return $content;
+            return [];
         }
 
         $segments = $this->split_block_segments($content);
@@ -681,7 +808,7 @@ class AIW_Wizard_Controller
             $blocks = array_merge($blocks, $this->html_fragment_to_blocks($segment));
         }
 
-        return implode("\n\n", $blocks);
+        return $blocks;
     }
 
     private function split_block_segments(string $content): array
@@ -751,8 +878,8 @@ class AIW_Wizard_Controller
             return [$this->wrap_image_block($node)];
         }
 
-        if (strpos((string) $node->getAttribute('class'), 'aiw-bio-box') !== false) {
-            return ["<!-- wp:html -->\n" . $this->dom_node_outer_html($node) . "\n<!-- /wp:html -->"];
+        if ($tag === 'ul' || $tag === 'ol') {
+            return [$this->wrap_list_block($node)];
         }
 
         return ["<!-- wp:html -->\n" . $this->dom_node_outer_html($node) . "\n<!-- /wp:html -->"];
@@ -767,7 +894,7 @@ class AIW_Wizard_Controller
     {
         $level = max(1, min(6, $level));
 
-        return "<!-- wp:heading {\"level\":{$level}} -->\n<h{$level}>" . trim($inner_html) . "</h{$level}>\n<!-- /wp:heading -->";
+        return "<!-- wp:heading {\"level\":{$level}} -->\n<h{$level} class=\"wp-block-heading\">" . trim($inner_html) . "</h{$level}>\n<!-- /wp:heading -->";
     }
 
     private function wrap_image_block(DOMElement $node): string
@@ -805,11 +932,45 @@ class AIW_Wizard_Controller
         $block .= '<figure class="wp-block-image size-full">';
         $block .= '<img src="' . esc_url($src) . '" alt="' . esc_attr($alt) . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
         if ($caption !== '') {
-            $block .= '<figcaption>' . esc_html($caption) . '</figcaption>';
+            $block .= '<figcaption class="wp-element-caption">' . esc_html($caption) . '</figcaption>';
         }
         $block .= '</figure><!-- /wp:image -->';
 
         return $block;
+    }
+
+    /**
+     * List block with one list-item block per <li>, the format the block editor saves. Nested
+     * lists become list blocks inside their parent list item.
+     */
+    private function wrap_list_block(DOMElement $node): string
+    {
+        $ordered = strtolower($node->tagName) === 'ol';
+        $tag = $ordered ? 'ol' : 'ul';
+
+        $items = '';
+        foreach ($node->childNodes as $child) {
+            if (!$child instanceof DOMElement || strtolower($child->tagName) !== 'li') {
+                continue;
+            }
+
+            $content = '';
+            $nested = '';
+            foreach ($child->childNodes as $part) {
+                if ($part instanceof DOMElement && in_array(strtolower($part->tagName), ['ul', 'ol'], true)) {
+                    $nested .= $this->wrap_list_block($part);
+                    continue;
+                }
+
+                $content .= $node->ownerDocument->saveHTML($part);
+            }
+
+            $items .= "<!-- wp:list-item -->\n<li>" . trim($content) . $nested . "</li>\n<!-- /wp:list-item -->";
+        }
+
+        return '<!-- wp:list' . ($ordered ? ' {"ordered":true}' : '') . " -->\n"
+            . '<' . $tag . ' class="wp-block-list">' . $items . '</' . $tag . '>'
+            . "\n<!-- /wp:list -->";
     }
 
     private function wrap_raw_html_block(string $html): string
@@ -854,30 +1015,34 @@ class AIW_Wizard_Controller
         return trim((string) $text);
     }
 
+    /**
+     * @param array<int,int> $attachment_ids Attachment IDs keyed by their 1-based slot number.
+     */
     private function build_inline_image_map(array $attachment_ids): array
     {
         $map = [];
-        $index = 1;
 
-        foreach ($attachment_ids as $attachment_id) {
-            $url = wp_get_attachment_url($attachment_id);
+        foreach ($attachment_ids as $slot => $attachment_id) {
+            $url = wp_get_attachment_url((int) $attachment_id);
             if (!is_string($url) || $url === '') {
                 continue;
             }
 
             $alt = (string) get_post_meta((int) $attachment_id, '_wp_attachment_image_alt', true);
-            $map[$index] = [
+            $map[(int) $slot] = [
                 'id' => (int) $attachment_id,
                 'url' => $url,
                 'alt' => $alt,
             ];
-            $index++;
         }
 
         return $map;
     }
 
-    private function upload_single_image(string $field_name, int $post_id): int
+    /**
+     * @param string[] $warnings Receives a message when a selected file could not be uploaded.
+     */
+    private function upload_single_image(string $field_name, int $post_id, array &$warnings): int
     {
         if (!isset($_FILES[$field_name]['name']) || !is_string($_FILES[$field_name]['name']) || $_FILES[$field_name]['name'] === '') {
             return 0;
@@ -887,15 +1052,27 @@ class AIW_Wizard_Controller
         $attachment_id = media_handle_upload($field_name, $post_id);
 
         if (is_wp_error($attachment_id)) {
+            $warnings[] = sprintf(
+                /* translators: 1: uploaded file name, 2: error message */
+                __('Image "%1$s" could not be uploaded: %2$s', 'article-import-wizard'),
+                sanitize_file_name(wp_unslash($_FILES[$field_name]['name'])),
+                $attachment_id->get_error_message()
+            );
             return 0;
         }
 
+        $this->mark_preview_upload((int) $attachment_id);
         $this->normalize_uploaded_image_orientation((int) $attachment_id);
 
         return (int) $attachment_id;
     }
 
-    private function upload_inline_images(int $limit, int $post_id): array
+    /**
+     * @param string[] $warnings
+     * @return array<int,int> Attachment IDs keyed by slot number, so [Bild 2] always gets slot 2
+     *                        even when slot 1 was left empty.
+     */
+    private function upload_inline_images(int $limit, int $post_id, array &$warnings): array
     {
         if ($limit <= 0) {
             return [];
@@ -903,61 +1080,31 @@ class AIW_Wizard_Controller
 
         $attachment_ids = [];
         for ($slot = 1; $slot <= $limit; $slot++) {
-            $attachment_id = $this->upload_single_image('aiw_inline_image_' . $slot, $post_id);
+            $attachment_id = $this->upload_single_image('aiw_inline_image_' . $slot, $post_id, $warnings);
             if ($attachment_id > 0) {
-                $attachment_ids[] = $attachment_id;
-            }
-        }
-
-        if (!empty($attachment_ids)) {
-            return $attachment_ids;
-        }
-
-        // Backward compatibility for legacy multi-upload input.
-        return $this->upload_multiple_images('aiw_inline_images', $limit, $post_id);
-    }
-
-    private function upload_multiple_images(string $field_name, int $limit, int $post_id): array
-    {
-        if ($limit <= 0 || !isset($_FILES[$field_name]) || !is_array($_FILES[$field_name]['name'])) {
-            return [];
-        }
-
-        $this->include_media_admin_files();
-
-        $attachment_ids = [];
-        $count = count($_FILES[$field_name]['name']);
-
-        for ($i = 0; $i < $count && count($attachment_ids) < $limit; $i++) {
-            $name = isset($_FILES[$field_name]['name'][$i]) ? (string) $_FILES[$field_name]['name'][$i] : '';
-            if ($name === '') {
-                continue;
-            }
-
-            $error = isset($_FILES[$field_name]['error'][$i]) ? (int) $_FILES[$field_name]['error'][$i] : UPLOAD_ERR_NO_FILE;
-            if ($error !== UPLOAD_ERR_OK) {
-                continue;
-            }
-
-            $tmp_key = $field_name . '_tmp_' . $i;
-            $_FILES[$tmp_key] = [
-                'name' => $name,
-                'type' => isset($_FILES[$field_name]['type'][$i]) ? (string) $_FILES[$field_name]['type'][$i] : '',
-                'tmp_name' => isset($_FILES[$field_name]['tmp_name'][$i]) ? (string) $_FILES[$field_name]['tmp_name'][$i] : '',
-                'error' => $error,
-                'size' => isset($_FILES[$field_name]['size'][$i]) ? (int) $_FILES[$field_name]['size'][$i] : 0,
-            ];
-
-            $attachment_id = media_handle_upload($tmp_key, $post_id);
-            unset($_FILES[$tmp_key]);
-
-            if (!is_wp_error($attachment_id)) {
-                $this->normalize_uploaded_image_orientation((int) $attachment_id);
-                $attachment_ids[] = (int) $attachment_id;
+                $attachment_ids[$slot] = $attachment_id;
             }
         }
 
         return $attachment_ids;
+    }
+
+    private function mark_preview_upload(int $attachment_id): void
+    {
+        update_post_meta($attachment_id, self::PREVIEW_UPLOAD_META, time());
+    }
+
+    private function attach_preview_upload(int $attachment_id, int $post_id): void
+    {
+        if ($attachment_id <= 0) {
+            return;
+        }
+
+        wp_update_post([
+            'ID' => $attachment_id,
+            'post_parent' => $post_id,
+        ]);
+        delete_post_meta($attachment_id, self::PREVIEW_UPLOAD_META);
     }
 
     private function include_media_admin_files(): void
@@ -983,20 +1130,10 @@ class AIW_Wizard_Controller
             return;
         }
 
-        $did_rotate = false;
-
-        if (method_exists($editor, 'maybe_exif_rotate')) {
-            $result = $editor->maybe_exif_rotate();
-            if (is_wp_error($result)) {
-                return;
-            }
-            $did_rotate = true;
-        } elseif (function_exists('exif_read_data')) {
-            $orientation = $this->read_image_orientation($file_path);
-            $did_rotate = $this->apply_exif_orientation_to_editor($editor, $orientation);
-        }
-
-        if (!$did_rotate) {
+        // WordPress already rotates photos on upload. This is a safety net for images core left
+        // unrotated; maybe_exif_rotate() returns true only when it actually changed the image.
+        $result = $editor->maybe_exif_rotate();
+        if ($result !== true) {
             return;
         }
 
@@ -1008,61 +1145,6 @@ class AIW_Wizard_Controller
         $metadata = wp_generate_attachment_metadata($attachment_id, $file_path);
         if (is_array($metadata)) {
             wp_update_attachment_metadata($attachment_id, $metadata);
-        }
-    }
-
-    private function read_image_orientation(string $file_path): int
-    {
-        if (!function_exists('exif_read_data')) {
-            return 1;
-        }
-
-        $exif_data = @exif_read_data($file_path);
-        if (!is_array($exif_data) || empty($exif_data['Orientation'])) {
-            return 1;
-        }
-
-        return (int) $exif_data['Orientation'];
-    }
-
-    private function apply_exif_orientation_to_editor($editor, int $orientation): bool
-    {
-        switch ($orientation) {
-            case 2:
-                if (method_exists($editor, 'flip')) {
-                    $editor->flip(true, false);
-                    return true;
-                }
-                return false;
-            case 3:
-                $editor->rotate(180);
-                return true;
-            case 4:
-                if (method_exists($editor, 'flip')) {
-                    $editor->flip(false, true);
-                    return true;
-                }
-                return false;
-            case 5:
-                if (method_exists($editor, 'flip')) {
-                    $editor->flip(true, false);
-                }
-                $editor->rotate(90);
-                return true;
-            case 6:
-                $editor->rotate(-90);
-                return true;
-            case 7:
-                if (method_exists($editor, 'flip')) {
-                    $editor->flip(true, false);
-                }
-                $editor->rotate(-90);
-                return true;
-            case 8:
-                $editor->rotate(90);
-                return true;
-            default:
-                return false;
         }
     }
 
@@ -1094,11 +1176,6 @@ class AIW_Wizard_Controller
         }
 
         return array_values(array_unique($links));
-    }
-
-    private function normalize_inline_figure_markup(string $content): string
-    {
-        return $content;
     }
 
     private function convert_mixed_paragraph_node_to_blocks(DOMElement $paragraph): array
@@ -1139,20 +1216,42 @@ class AIW_Wizard_Controller
             return $content;
         }
 
+        $marker = '<span class="aiw-check-link" style="color:#cc0000;font-weight:700;">CHECK LINK</span>';
+
+        // Longest first, so a broken URL that is a prefix of another broken URL cannot split it.
+        usort($invalid_urls, static function (string $a, string $b): int {
+            return strlen($b) <=> strlen($a);
+        });
+
         foreach ($invalid_urls as $invalid_url) {
-            $quoted = preg_quote($invalid_url, '/');
+            // URLs are validated in decoded form, but the content stores them HTML-encoded:
+            // &amp; in text (esc_html) and &#038; in imported link hrefs (esc_url).
+            $variants = array_unique([
+                $invalid_url,
+                esc_html($invalid_url),
+                htmlspecialchars($invalid_url, ENT_QUOTES, 'UTF-8'),
+                str_replace('&', '&#038;', $invalid_url),
+            ]);
 
-            $content = (string) preg_replace(
-                '/<a\b[^>]*href=["\']' . $quoted . '["\'][^>]*>.*?<\/a>/is',
-                '<span class="aiw-check-link" style="color:#cc0000;font-weight:700;">CHECK LINK</span>',
-                $content
-            );
+            foreach ($variants as $variant) {
+                $quoted = preg_quote($variant, '/');
 
-            $content = (string) preg_replace(
-                '/(?<!["\'])' . $quoted . '(?!["\'])/i',
-                '<span class="aiw-check-link" style="color:#cc0000;font-weight:700;">CHECK LINK</span>',
-                $content
-            );
+                $content = (string) preg_replace(
+                    '/<a\b[^>]*href=["\']' . $quoted . '["\'][^>]*>.*?<\/a>/is',
+                    $marker,
+                    $content
+                );
+
+                // Bare URL in text. It must not be inside an attribute or another URL, and it must
+                // end here: the next character is whitespace, a tag, the end, or sentence punctuation
+                // that is itself followed by a boundary. This keeps "https://x.com/a" from matching
+                // inside "https://x.com/abc".
+                $content = (string) preg_replace(
+                    '/(?<![\w"\'=\/])' . $quoted . '(?=$|[\s<]|[.,;:!?)\]}\'"*]+(?:$|[\s<]))/iu',
+                    $marker,
+                    $content
+                );
+            }
         }
 
         return $content;

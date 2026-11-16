@@ -85,6 +85,13 @@ class AIW_Frontend_Author
             return false;
         }
 
+        // The author filters run for every post rendered on the page (related posts, widgets,
+        // comments). Only rewrite the author while the imported post itself is being rendered.
+        $current_post_id = (int) get_the_ID();
+        if ($current_post_id !== $post_id) {
+            return false;
+        }
+
         if ((int) get_post_meta($post_id, '_aiw_imported', true) !== 1) {
             return false;
         }

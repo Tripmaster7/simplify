@@ -25,7 +25,9 @@ class AIW_Admin_Menu
         add_menu_page(
             __('Article Import Wizard', 'article-import-wizard'),
             __('Article Import', 'article-import-wizard'),
-            'edit_posts',
+            // The wizard requires edit_posts and upload_files; upload_files implies edit_posts for
+            // core roles, so this hides the menu from users who would only get a permission error.
+            'upload_files',
             'aiw-import-wizard',
             [$this->wizard_controller, 'render_page'],
             'dashicons-media-document',

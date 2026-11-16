@@ -2,20 +2,20 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 0.1.7
+**Current version:** 1.0.0
 
 **Author:** GitHub Copilot and Jens
 
 ## What It Does
 
-- Imports article text and metadata from DOCX files
+- Imports article text and metadata from DOCX files, keeping bold, italic, hyperlinks, and bullet or numbered lists (including nested lists)
 - Generates a full preview before creating a post
 - Resolves the public author from a required membership number (WordPress username)
 - Keeps the importing operator in private audit metadata
 - Requires at least one existing or newly created category
 - Uploads a featured image, configurable inline images, and an author image
 - Replaces numbered image markers with WordPress image blocks
-- Inserts configurable content-restriction shortcodes at the article boundary
+- Restricts every article with configurable shortcodes: the start goes at the `[RESTRICT]` marker or automatically after the 2nd paragraph (earlier if the first paragraph reaches 1,000 characters); the end always goes after the last paragraph, so the author bio stays public
 - Reuses and updates author biographies stored in WordPress user metadata
 - Validates HTTP and HTTPS links before draft creation
 - Replaces broken links with `CHECK LINK` or reports them without changing the link
@@ -25,10 +25,10 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 
 ## Requirements
 
-- WordPress 6.0 or newer
-- PHP 7.4 or newer
+- WordPress 7.0 or newer
+- PHP 8.3 or newer
 - PHP `ZipArchive` extension for DOCX parsing
-- A WordPress user for each public author, with the membership number as the username
+- A WordPress user for each public author, with the membership number as the username (five digits starting with 0, for example `01234`)
 - `edit_posts` and `upload_files` capabilities for import operators
 
 ## Installation
@@ -43,12 +43,12 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 1. Enter the author's membership number and select at least one category.
 2. Upload a DOCX file and optionally override the extracted title or content.
 3. Upload the featured image, inline images, and author image as needed.
-4. Review or update the author's biography.
+4. Review or update the author's biography. If the field is left empty, a `[BIO: ...]` marker from the DOCX is used, and otherwise the bio already stored on the author's profile.
 5. Generate the preview. The plugin parses the document, maps images, builds block markup, inserts restriction shortcodes, and checks links.
 6. Review warnings, categories, author attribution, and the generated article.
 7. Confirm to create the draft and send the notification email.
 
-Preview data is temporary. If it expires, generate a new preview before creating the draft.
+Preview data is temporary. If it expires, generate a new preview before creating the draft. Images uploaded for a preview that never becomes a draft are deleted automatically by a daily cleanup task after 24 hours.
 
 ## DOCX Markers
 
@@ -57,7 +57,7 @@ The importer recognizes these metadata markers:
 ```text
 [TITLE: Article headline]
 [SUBTITLE: Article subtitle]
-[AUTHOR_MEMBERSHIP: 123456]
+[AUTHOR_MEMBERSHIP: 01234]
 [WRITING_DATE: 2026-08-04]
 [BIO: Short author biography]
 [RESTRICT]
@@ -82,7 +82,15 @@ Use numbered image placeholders where inline images should appear:
 
 The first valid metadata value wins. Duplicate values and a membership number that differs from the wizard entry are reported as preview warnings. The wizard membership number remains the source of truth.
 
-The legacy `[RESTRICT_START]` and `[RESTRICT_END]` markers are accepted for compatibility. New documents should use `[RESTRICT]`; the configured closing shortcode is inserted immediately before the generated author bio box.
+### Restricted content
+
+Every imported article gets a restricted part:
+
+- **Start:** at the `[RESTRICT]` marker. Without a marker, the start is inserted automatically after the 2nd text paragraph, or after the 1st paragraph if it alone reaches 1,000 characters (spaces included). Headings, images and lists are not counted. The preview warns when the automatic position was used.
+- **End:** always directly after the last part of the article and before the author bio box, so the bio is always public. A `[RESTRICT_END]` marker in the document is ignored.
+- If nothing follows the start (for example `[RESTRICT]` at the very end), the preview warns that the restricted part is empty.
+
+The legacy `[RESTRICT_START]` marker is still accepted and treated like `[RESTRICT]`.
 
 See [editorial-cheat-sheet.md](editorial-cheat-sheet.md) for the short authoring guide or [editorial-cheat-sheet-print.html](editorial-cheat-sheet-print.html) for the printable version.
 
@@ -90,14 +98,14 @@ See [editorial-cheat-sheet.md](editorial-cheat-sheet.md) for the short authoring
 
 The settings page controls:
 
-- Restriction start shortcode (default: `[restrict]`)
-- Restriction end shortcode (default: `[/restrict]`)
+- Restriction start shortcode, required (default: `[restrict]`)
+- Restriction end shortcode, required (default: `[/restrict]`). If it is left empty, the closing tag is derived from the start shortcode, for example `[restrict level="2"]` gives `[/restrict]`.
 - Default inline image slots, from 0 to 20 (default: 3)
 - Import notification email address
-- Link-check timeout, from 1,000 to 20,000 ms (default: 6,000 ms)
+- Link-check timeout per link, from 1,000 to 20,000 ms (default: 6,000 ms). The whole link check is capped at 20 seconds; links not checked in that time are listed as a preview warning.
 - Broken-link handling: replace with `CHECK LINK` or flag only
 
-These defaults can be adjusted for an individual import before generating its preview.
+The inline image slots and broken-link handling can be adjusted for an individual import before generating its preview.
 
 ## Author Attribution and Audit Data
 
@@ -116,6 +124,7 @@ The plugin also records the source filename, import time, selected categories, r
 - Membership numbers, settings, text fields, IDs, and uploaded filenames are sanitized.
 - Only `.docx` files are accepted by the import handler.
 - Generated posts always use `draft` status.
+- Link checks use WordPress's safe HTTP API, so URLs pointing at private or loopback addresses are not requested.
 - The operator identity is never inserted into public article content.
 
 ## Repository Layout
@@ -134,6 +143,7 @@ The detailed implementation blueprint is available in [wordpress-article-importe
 
 ## Current Scope
 
-- DOCX parsing is intentionally based on structured paragraphs and markers; it is not a general-purpose Word-to-HTML converter.
+- DOCX parsing is intentionally based on structured paragraphs and markers; it is not a general-purpose Word-to-HTML converter. Bold, italic, links and lists are kept; underline, colours, fonts, tables and text boxes are not. Markdown syntax is not interpreted.
 - Link checks run during preview generation, so documents with many links can take longer to process.
+- Hyperlinks inserted with Word's link feature are imported as links and checked. Only `http`, `https` and `mailto` targets become links; links to bookmarks inside the document, and any other target, are kept as plain text.
 - Imports create new drafts rather than updating existing posts.

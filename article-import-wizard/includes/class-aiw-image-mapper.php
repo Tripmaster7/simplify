@@ -34,7 +34,7 @@ class AIW_Image_Mapper
                 $figure = '<figure class="aiw-inline-image wp-block-image size-full">';
                 $figure .= '<img src="' . $url . '" alt="' . $alt . '"' . ($id > 0 ? ' class="wp-image-' . esc_attr((string) $id) . '"' : '') . ' />';
                 if ($caption !== '') {
-                    $figure .= '<figcaption>' . esc_html($caption) . '</figcaption>';
+                    $figure .= '<figcaption class="wp-element-caption">' . esc_html($caption) . '</figcaption>';
                 }
                 $figure .= '</figure>';
 

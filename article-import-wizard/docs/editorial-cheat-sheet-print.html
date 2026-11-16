@@ -166,15 +166,16 @@
           <li>[HEADER 3 Zwischenüberschrift] (ergibt im Text ein H3)</li>
           <li>[HEADER 4 Zwischenüberschrift] (ergibt im Text ein H4)</li>
           <li>[WRITING_DATE: 2026-08-04]</li>
-          <li>[AUTHOR_MEMBERSHIP: 123456]</li>
+          <li>[AUTHOR_MEMBERSHIP: 01234]</li>
           <li>[BIO: Kurze Autoren-Bio] (optional)</li>
-          <li>[RESTRICT] (Anker für den eingeschränkten Bereich)</li>
-          <li>[RESTRICT_START] / [RESTRICT_END] (nur Altformat)</li>
+          <li>[RESTRICT] (Beginn Mitgliederbereich; sonst nach dem 2. Absatz, oder nach dem 1. bei 1.000+ Zeichen)</li>
+          <li>[RESTRICT_START] = [RESTRICT]; [RESTRICT_END] wird ignoriert (Altformat)</li>
         </ul>
         <ul>
           <li>H1 bleibt dem Titel vorbehalten.</li>
           <li>H2 kommt aus dem Untertitel oder aus einem einfachen [HEADER]-Tag im Text.</li>
           <li>Für tiefere Ebenen im Fließtext [HEADER 3] und [HEADER 4] verwenden.</li>
+          <li>Der Mitgliederbereich endet immer vor der Autoren-Bio; die Bio ist öffentlich.</li>
         </ul>
       </article>
 
@@ -190,6 +191,10 @@
           <li>Inline-Bilder in exakt derselben Reihenfolge hochladen.</li>
           <li>Bei Abweichungen zeigt die Vorschau eine Warnung.</li>
         </ul>
+        <ul>
+          <li>Word-Formatierung bleibt erhalten: <strong>fett</strong>, <em>kursiv</em>, Links, Aufzählungen und nummerierte Listen.</li>
+          <li>Nicht übernommen: Unterstreichung, Farben, Schriftarten, Tabellen. Kein Markdown.</li>
+        </ul>
       </article>
 
       <article class="card">
@@ -199,10 +204,11 @@
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
 
-[RESTRICT]
-
 Erster Absatz...
 Zweiter Absatz mit [Bild 1: Bildunterschrift].
+
+[RESTRICT]  (optional)
+
 Dritter Absatz mit [Bild 2].
 
 [HEADER Zwischenüberschrift]
@@ -213,8 +219,6 @@ Absatz auf Ebene H3...
 
 [HEADER 4 Detail]
 Absatz auf Ebene H4...
-
-[RESTRICT_END]  (nur Altformat; der Assistent setzt den schließenden Shortcode normalerweise vor die Bio)
 
 [BIO: ]</div>
       </article>

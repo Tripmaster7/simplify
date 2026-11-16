@@ -82,7 +82,16 @@ class AIW_Admin_I18n
         'Please select at least one category.' => 'Bitte wählen Sie mindestens eine Kategorie aus.',
         'No user found for that membership number.' => 'Für diese Mitgliedsnummer wurde kein Benutzer gefunden.',
         'DOCX membership number does not match the wizard membership number.' => 'Die DOCX-Mitgliedsnummer stimmt nicht mit der im Assistenten überein.',
-        'DOCX is missing the [RESTRICT] anchor.' => 'In der DOCX fehlt der [RESTRICT]-Anker.',
+        'No [RESTRICT] marker found. The restricted part starts automatically after paragraph %d.' => 'Kein [RESTRICT]-Marker gefunden. Der geschützte Teil beginnt automatisch nach Absatz %d.',
+        'The restricted part is empty because nothing follows the restriction start. Add a [RESTRICT] marker earlier in the article.' => 'Der geschützte Teil ist leer, weil nach dem Restriktionsbeginn nichts mehr folgt. Setzen Sie einen [RESTRICT]-Marker weiter vorne im Artikel.',
+        'The restriction start and end shortcodes are required. Please set them under Settings > Article Import Wizard.' => 'Die Shortcodes für Beginn und Ende der Restriktion sind erforderlich. Bitte unter Einstellungen > Artikel-Import-Assistent festlegen.',
+        'The restriction start shortcode is required and must be a shortcode such as [restrict]. The default was restored.' => 'Der Shortcode für den Restriktionsbeginn ist erforderlich und muss ein Shortcode wie [restrict] sein. Der Standardwert wurde wiederhergestellt.',
+        'The restriction end shortcode is required. It was set to %s to match the start shortcode.' => 'Der Shortcode für das Restriktionsende ist erforderlich. Er wurde passend zum Beginn auf %s gesetzt.',
+        'Required. Inserted at the [RESTRICT] marker, or automatically after the 2nd paragraph (earlier if the first paragraph reaches 1,000 characters).' => 'Erforderlich. Wird am [RESTRICT]-Marker eingefügt, sonst automatisch nach dem 2. Absatz (früher, wenn der erste Absatz 1.000 Zeichen erreicht).',
+        'Required. Always inserted after the last paragraph, before the author bio, so the bio stays public.' => 'Erforderlich. Wird immer nach dem letzten Absatz und vor der Autoren-Bio eingefügt, damit die Bio öffentlich bleibt.',
+        'The DOCX contains more than one [%s] marker. The first value was used.' => 'Die DOCX enthält mehr als einen [%s]-Marker. Der erste Wert wurde verwendet.',
+        '%d link(s) were not checked because the link check took too long. Please check them manually.' => '%d Link(s) wurden nicht geprüft, weil die Link-Prüfung zu lange dauerte. Bitte manuell prüfen.',
+        'Image "%1$s" could not be uploaded: %2$s' => 'Bild „%1$s“ konnte nicht hochgeladen werden: %2$s',
         'Title and content are required (either manually or from DOCX).' => 'Titel und Inhalt sind erforderlich (manuell oder aus DOCX).',
         'Preview generated. Review and confirm draft creation.' => 'Vorschau erstellt. Bitte prüfen und Entwurfserstellung bestätigen.',
         'Preview token missing. Please run preview first.' => 'Vorschau-Token fehlt. Bitte zuerst Vorschau ausführen.',
@@ -130,7 +139,7 @@ class AIW_Admin_I18n
             return false;
         }
 
-        $locale = function_exists('determine_locale') ? determine_locale() : get_locale();
+        $locale = determine_locale();
         if (stripos((string) $locale, 'de') !== 0) {
             return false;
         }

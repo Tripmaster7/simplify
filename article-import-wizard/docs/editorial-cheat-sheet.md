@@ -25,11 +25,11 @@ Pflicht oder dringend empfohlen:
 - [TITLE: Ihre Überschrift]
 - [SUBTITLE: Ihre Unterzeile]
 - [WRITING_DATE: 2026-08-04]
-- [AUTHOR_MEMBERSHIP: 123456]
+- [AUTHOR_MEMBERSHIP: 01234]
 
 Optional:
 - [BIO: Kurzer Autorentext]
-- [RESTRICT]
+- [RESTRICT] (Beginn des Mitgliederbereichs; ohne Marker: nach dem 2. Absatz, oder nach dem 1., wenn er 1.000+ Zeichen hat)
 - [HEADER Zwischenüberschrift]
 - [HEADER 3 Zwischenüberschrift]
 - [HEADER 4 Zwischenüberschrift]
@@ -39,9 +39,11 @@ Regel für Überschriften:
 - H2 kommt aus dem Untertitel oder aus einem einfachen `[HEADER ...]` im Fließtext.
 - Für tiefere Ebenen im Fließtext `[HEADER 3 ...]` und `[HEADER 4 ...]` verwenden.
 
+Das Ende des Mitgliederbereichs wird automatisch nach dem letzten Absatz gesetzt; die Autoren-Bio ist immer öffentlich.
+
 Nur für Altdokumente:
-- [RESTRICT_START]
-- [RESTRICT_END]
+- [RESTRICT_START] (wie [RESTRICT])
+- [RESTRICT_END] (wird ignoriert)
 
 ## 4) Inline-Bildmarker im Artikeltext
 Marker an den Stellen einsetzen, an denen Bilder erscheinen sollen:
@@ -54,6 +56,11 @@ Regeln:
 - Bilder in derselben Reihenfolge hochladen.
 - Wenn Marker und Uploads nicht zusammenpassen, zeigt die Vorschau eine Warnung.
 
+Formatierung:
+- Normale Word-Formatierung verwenden: **fett**, *kursiv*, Links sowie Aufzählungen und nummerierte Listen (auch verschachtelt) bleiben erhalten.
+- Unterstreichungen, Farben, Schriftarten und Tabellen werden nicht übernommen.
+- Kein Markdown tippen (`**fett**`, `# Überschrift`); es erscheint wörtlich im Text.
+
 ## 5) DOCX-Vorlage zum Kopieren
 Diesen Block in ein neues Word-Dokument kopieren und ausfüllen.
 
@@ -62,11 +69,11 @@ Diesen Block in ein neues Word-Dokument kopieren und ausfüllen.
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
 
-[RESTRICT]
-
 Erster Absatz...
 
 Zweiter Absatz mit Bildmarker [Bild 1: Bildunterschrift].
+
+[RESTRICT]  (optional; ohne Marker beginnt der geschützte Teil nach dem 2. Absatz)
 
 Weiterer Absatz mit [Bild 2].
 
@@ -78,8 +85,6 @@ Absatz für Ebene H3.
 
 [HEADER 4 Detail]
 Absatz für Ebene H4.
-
-[RESTRICT_END]  (nur Altformat; der Assistent setzt den schließenden Shortcode normalerweise vor die Bio)
 
 [BIO: ]
 

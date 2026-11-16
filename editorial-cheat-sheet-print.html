@@ -165,14 +165,15 @@
           <li>[HEADER 3 Headline 3] (body H3 block)</li>
           <li>[HEADER 4 Headline 4] (body H4 block)</li>
           <li>[WRITING_DATE: 2026-08-04]</li>
-          <li>[AUTHOR_MEMBERSHIP: 123456]</li>
+          <li>[AUTHOR_MEMBERSHIP: 01234]</li>
           <li>[BIO: Short author bio] (optional)</li>
-          <li>[RESTRICT] (anchor for restricted section)</li>
-          <li>[RESTRICT_START] / [RESTRICT_END] (legacy fallback only)</li>
+          <li>[RESTRICT] (start of members-only part; default: after 2nd paragraph, or 1st if 1,000+ characters)</li>
+          <li>[RESTRICT_START] = [RESTRICT]; [RESTRICT_END] is ignored (legacy)</li>
         </ul>
         <ul>
           <li>H1 and H2 are reserved for title/subtitle only.</li>
           <li>Use HEADER 3 and HEADER 4 tags inside article body.</li>
+          <li>The members-only part always ends before the author bio; the bio is public.</li>
         </ul>
       </article>
 
@@ -188,6 +189,10 @@
           <li>Upload inline images in matching order.</li>
           <li>If mismatch: preview shows warning.</li>
         </ul>
+        <ul>
+          <li>Word formatting kept: <strong>bold</strong>, <em>italic</em>, links, bullet and numbered lists.</li>
+          <li>Not kept: underline, colours, fonts, tables. No Markdown.</li>
+        </ul>
       </article>
 
       <article class="card">
@@ -197,10 +202,11 @@
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
 
-[RESTRICT]
-
 First paragraph...
 Second paragraph with [Bild 1: Caption].
+
+[RESTRICT]  (optional)
+
 Third paragraph with [Bild 2].
 
 [HEADER 3 Background]
@@ -208,8 +214,6 @@ Section paragraph...
 
 [HEADER 4 Detail]
 Detail paragraph...
-
-[RESTRICT_END]  (legacy fallback only; the wizard inserts the closing shortcode before the bio)
 
 [BIO: ]</div>
       </article>

@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Article Import Wizard 0.0.13\n"
+"Project-Id-Version: Article Import Wizard 1.0.0\n"
 "POT-Creation-Date: 2026-08-04 12:30+0000\n"
 "PO-Revision-Date: 2026-08-04 12:30+0000\n"
 "Last-Translator: GitHub Copilot and Jens\n"
@@ -262,10 +262,6 @@ msgid "DOCX membership number does not match the wizard membership number."
 msgstr "Die DOCX-Mitgliedsnummer stimmt nicht mit der im Assistenten überein."
 
 #: includes/class-aiw-wizard-controller.php
-msgid "DOCX is missing the [RESTRICT] anchor."
-msgstr "In der DOCX fehlt der [RESTRICT]-Anker."
-
-#: includes/class-aiw-wizard-controller.php
 msgid "Title and content are required (either manually or from DOCX)."
 msgstr "Titel und Inhalt sind erforderlich (manuell oder aus DOCX)."
 
@@ -292,3 +288,48 @@ msgstr "Zugeordneter Autor fehlt in den Vorschau-Daten."
 #: includes/class-aiw-wizard-controller.php
 msgid "Draft #%1$s created. Attributed author: %2$s"
 msgstr "Entwurf #%1$s erstellt. Zugeordneter Autor: %2$s"
+
+#: includes/class-aiw-wizard-controller.php
+#, php-format
+msgid "The DOCX contains more than one [%s] marker. The first value was used."
+msgstr "Die DOCX enthält mehr als einen [%s]-Marker. Der erste Wert wurde verwendet."
+
+#: includes/class-aiw-wizard-controller.php
+#, php-format
+msgid "%d link(s) were not checked because the link check took too long. Please check them manually."
+msgstr "%d Link(s) wurden nicht geprüft, weil die Link-Prüfung zu lange dauerte. Bitte manuell prüfen."
+
+#: includes/class-aiw-wizard-controller.php
+#, php-format
+msgid "Image \"%1$s\" could not be uploaded: %2$s"
+msgstr "Bild „%1$s“ konnte nicht hochgeladen werden: %2$s"
+
+#: includes/class-aiw-wizard-controller.php
+#, php-format
+msgid "No [RESTRICT] marker found. The restricted part starts automatically after paragraph %d."
+msgstr "Kein [RESTRICT]-Marker gefunden. Der geschützte Teil beginnt automatisch nach Absatz %d."
+
+#: includes/class-aiw-wizard-controller.php
+msgid "The restricted part is empty because nothing follows the restriction start. Add a [RESTRICT] marker earlier in the article."
+msgstr "Der geschützte Teil ist leer, weil nach dem Restriktionsbeginn nichts mehr folgt. Setzen Sie einen [RESTRICT]-Marker weiter vorne im Artikel."
+
+#: includes/class-aiw-wizard-controller.php
+msgid "The restriction start and end shortcodes are required. Please set them under Settings > Article Import Wizard."
+msgstr "Die Shortcodes für Beginn und Ende der Restriktion sind erforderlich. Bitte unter Einstellungen > Artikel-Import-Assistent festlegen."
+
+#: includes/class-aiw-settings.php
+msgid "The restriction start shortcode is required and must be a shortcode such as [restrict]. The default was restored."
+msgstr "Der Shortcode für den Restriktionsbeginn ist erforderlich und muss ein Shortcode wie [restrict] sein. Der Standardwert wurde wiederhergestellt."
+
+#: includes/class-aiw-settings.php
+#, php-format
+msgid "The restriction end shortcode is required. It was set to %s to match the start shortcode."
+msgstr "Der Shortcode für das Restriktionsende ist erforderlich. Er wurde passend zum Beginn auf %s gesetzt."
+
+#: includes/class-aiw-settings.php
+msgid "Required. Inserted at the [RESTRICT] marker, or automatically after the 2nd paragraph (earlier if the first paragraph reaches 1,000 characters)."
+msgstr "Erforderlich. Wird am [RESTRICT]-Marker eingefügt, sonst automatisch nach dem 2. Absatz (früher, wenn der erste Absatz 1.000 Zeichen erreicht)."
+
+#: includes/class-aiw-settings.php
+msgid "Required. Always inserted after the last paragraph, before the author bio, so the bio stays public."
+msgstr "Erforderlich. Wird immer nach dem letzten Absatz und vor der Autoren-Bio eingefügt, damit die Bio öffentlich bleibt."

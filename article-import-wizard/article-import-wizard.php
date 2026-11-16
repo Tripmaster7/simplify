@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Article Import Wizard
  * Description: Guided article import workflow for non-technical editors with membership-based author attribution.
- * Version: 0.1.7
+ * Version: 1.0.0
  * Author: GitHub Copilot and Jens
- * Requires at least: 6.0
- * Requires PHP: 7.4
+ * Requires at least: 7.0
+ * Requires PHP: 8.3
  * Text Domain: article-import-wizard
  * Domain Path: /languages
  */
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AIW_PLUGIN_VERSION', '0.1.7');
+define('AIW_PLUGIN_VERSION', '1.0.0');
 define('AIW_PLUGIN_FILE', __FILE__);
 define('AIW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIW_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -25,7 +25,6 @@ require_once AIW_PLUGIN_DIR . 'includes/class-aiw-author-service.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-docx-parser.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-image-mapper.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-link-validator.php';
-require_once AIW_PLUGIN_DIR . 'includes/class-aiw-content-builder.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-notifier.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-shortcode-service.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-frontend-author.php';
@@ -43,7 +42,6 @@ add_action('plugins_loaded', static function () {
     $docx_parser = new AIW_DOCX_Parser();
     $image_mapper = new AIW_Image_Mapper();
     $link_validator = new AIW_Link_Validator();
-    $content_builder = new AIW_Content_Builder();
     $notifier = new AIW_Notifier();
     $shortcode_service = new AIW_Shortcode_Service();
     $shortcode_service->register();
@@ -53,9 +51,7 @@ add_action('plugins_loaded', static function () {
         $docx_parser,
         $image_mapper,
         $link_validator,
-        $content_builder,
-        $notifier,
-        $shortcode_service
+        $notifier
     );
     $admin_menu = new AIW_Admin_Menu($wizard_controller);
 
@@ -70,4 +66,13 @@ add_action('plugins_loaded', static function () {
 
     $admin_i18n = new AIW_Admin_I18n();
     $admin_i18n->register();
+
+    // Self-healing schedule: also covers sites that updated the plugin without re-activating it.
+    if (!wp_next_scheduled(AIW_Wizard_Controller::CLEANUP_HOOK)) {
+        wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', AIW_Wizard_Controller::CLEANUP_HOOK);
+    }
+});
+
+register_deactivation_hook(__FILE__, static function () {
+    wp_clear_scheduled_hook(AIW_Wizard_Controller::CLEANUP_HOOK);
 });

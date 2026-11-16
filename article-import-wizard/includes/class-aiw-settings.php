@@ -13,6 +13,22 @@ class AIW_Settings
     public const OPTION_LINK_CHECK_TIMEOUT = 'aiw_link_check_timeout_ms';
     public const OPTION_REPLACE_BROKEN_LINKS_MODE = 'aiw_replace_broken_links_mode';
 
+    public const DEFAULT_RESTRICTION_START = '[restrict]';
+    public const DEFAULT_RESTRICTION_END = '[/restrict]';
+
+    /**
+     * The closing shortcode for a start shortcode: "[restrict level=2]" -> "[/restrict]".
+     * Returns '' when no shortcode tag can be read from the start shortcode.
+     */
+    public static function closing_shortcode_for(string $start_shortcode): string
+    {
+        if (preg_match('/^\[\s*([A-Za-z0-9_-]+)/', trim($start_shortcode), $matches) !== 1) {
+            return '';
+        }
+
+        return '[/' . $matches[1] . ']';
+    }
+
     public function register(): void
     {
         add_action('admin_init', [$this, 'register_settings']);
@@ -51,16 +67,19 @@ class AIW_Settings
 
     public function register_settings(): void
     {
+        // Both shortcodes are required: every imported article is restricted, and the restriction
+        // must be closed before the public author bio. They are registered in this order so the end
+        // sanitizer can read the just-saved start shortcode.
         register_setting('aiw_settings_group', self::OPTION_RESTRICTION_START, [
             'type' => 'string',
-            'sanitize_callback' => 'sanitize_text_field',
-            'default' => '[restrict]'
+            'sanitize_callback' => [$this, 'sanitize_restriction_start'],
+            'default' => self::DEFAULT_RESTRICTION_START
         ]);
 
         register_setting('aiw_settings_group', self::OPTION_RESTRICTION_END, [
             'type' => 'string',
-            'sanitize_callback' => 'sanitize_text_field',
-            'default' => '[/restrict]'
+            'sanitize_callback' => [$this, 'sanitize_restriction_end'],
+            'default' => self::DEFAULT_RESTRICTION_END
         ]);
 
         register_setting('aiw_settings_group', self::OPTION_INLINE_IMAGE_SLOTS, [
@@ -100,7 +119,11 @@ class AIW_Settings
             [$this, 'render_text_field'],
             'aiw-settings',
             'aiw_main_section',
-            ['option' => self::OPTION_RESTRICTION_START]
+            [
+                'option' => self::OPTION_RESTRICTION_START,
+                'required' => true,
+                'description' => __('Required. Inserted at the [RESTRICT] marker, or automatically after the 2nd paragraph (earlier if the first paragraph reaches 1,000 characters).', 'article-import-wizard'),
+            ]
         );
 
         add_settings_field(
@@ -109,7 +132,11 @@ class AIW_Settings
             [$this, 'render_text_field'],
             'aiw-settings',
             'aiw_main_section',
-            ['option' => self::OPTION_RESTRICTION_END]
+            [
+                'option' => self::OPTION_RESTRICTION_END,
+                'required' => true,
+                'description' => __('Required. Always inserted after the last paragraph, before the author bio, so the bio stays public.', 'article-import-wizard'),
+            ]
         );
 
         add_settings_field(
@@ -152,7 +179,12 @@ class AIW_Settings
     {
         $option = (string) ($args['option'] ?? '');
         $value = (string) get_option($option, '');
-        echo '<input type="text" class="regular-text" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '" />';
+        $required = !empty($args['required']) ? ' required' : '';
+        echo '<input type="text" class="regular-text" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '"' . $required . ' />';
+
+        if (!empty($args['description'])) {
+            echo '<p class="description">' . esc_html((string) $args['description']) . '</p>';
+        }
     }
 
     public function render_email_field(array $args): void
@@ -181,6 +213,46 @@ class AIW_Settings
             <option value="flag_only" <?php selected($value, 'flag_only'); ?>><?php esc_html_e('Flag only (keep original)', 'article-import-wizard'); ?></option>
         </select>
         <?php
+    }
+
+    public function sanitize_restriction_start($value): string
+    {
+        $value = trim(sanitize_text_field((string) $value));
+        if (self::closing_shortcode_for($value) !== '') {
+            return $value;
+        }
+
+        add_settings_error(
+            self::OPTION_RESTRICTION_START,
+            'aiw_restriction_start_invalid',
+            __('The restriction start shortcode is required and must be a shortcode such as [restrict]. The default was restored.', 'article-import-wizard')
+        );
+
+        return self::DEFAULT_RESTRICTION_START;
+    }
+
+    public function sanitize_restriction_end($value): string
+    {
+        $value = trim(sanitize_text_field((string) $value));
+        if ($value !== '') {
+            return $value;
+        }
+
+        $start = self::get_option_string(self::OPTION_RESTRICTION_START, self::DEFAULT_RESTRICTION_START);
+        $derived = self::closing_shortcode_for($start);
+
+        add_settings_error(
+            self::OPTION_RESTRICTION_END,
+            'aiw_restriction_end_derived',
+            sprintf(
+                /* translators: %s: closing shortcode, e.g. [/restrict] */
+                __('The restriction end shortcode is required. It was set to %s to match the start shortcode.', 'article-import-wizard'),
+                $derived !== '' ? $derived : self::DEFAULT_RESTRICTION_END
+            ),
+            'warning'
+        );
+
+        return $derived !== '' ? $derived : self::DEFAULT_RESTRICTION_END;
     }
 
     public function sanitize_inline_image_slots($value): int
