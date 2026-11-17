@@ -6,6 +6,11 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 
 **Author:** GitHub Copilot and Jens
 
+## Contributors
+
+- **Jens** - Product owner and repository maintainer
+- **GitHub Copilot** - AI coding and documentation contributor
+
 ## What It Does
 
 - Imports article text and metadata from DOCX files, keeping bold, italic, hyperlinks, and bullet or numbered lists (including nested lists)
