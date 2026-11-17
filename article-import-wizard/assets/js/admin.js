@@ -29,11 +29,6 @@
 
         membershipInput.value = membershipNumber;
 
-        if (!/^0\d{4}$/.test(membershipNumber)) {
-            showInvalid(AIWAdmin.membershipFormatMessage);
-            return;
-        }
-
         membershipInput.setCustomValidity('');
         membershipStatus.className = 'aiw-membership-status';
         membershipStatus.textContent = AIWAdmin.membershipCheckingMessage;
@@ -67,7 +62,10 @@
 
                 membershipInput.setCustomValidity('');
                 membershipStatus.className = 'aiw-membership-status aiw-membership-status--valid';
-                membershipStatus.textContent = AIWAdmin.membershipAuthorLabel + ' ' + response.data.name;
+                membershipStatus.textContent = (response.data.fallback
+                    ? (AIWAdmin.membershipFallbackLabel || 'Fallback author:')
+                    : AIWAdmin.membershipAuthorLabel)
+                    + ' ' + response.data.name;
             })
             .catch(function () {
                 if (currentRequest === requestSequence) {

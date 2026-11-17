@@ -83,9 +83,11 @@ class AIW_Admin_Menu
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'membershipNonce' => wp_create_nonce('aiw_validate_membership'),
             'membershipFormatMessage' => __('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'),
+            'membershipRequiredMessage' => __('Enter a membership number or author name.', 'article-import-wizard'),
             'membershipCheckingMessage' => __('Checking membership number...', 'article-import-wizard'),
             'membershipAuthorLabel' => __('Author:', 'article-import-wizard'),
             'membershipRequestError' => __('The membership number could not be checked. Please try again.', 'article-import-wizard'),
+            'membershipFallbackLabel' => __('Fallback author:', 'article-import-wizard'),
             'categoryNewLabel' => __('New', 'article-import-wizard'),
         ]);
     }

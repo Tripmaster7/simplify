@@ -94,24 +94,43 @@ class AIW_Wizard_Controller
 
         check_ajax_referer('aiw_validate_membership', 'nonce');
 
-        $membership_number = isset($_POST['membership_number'])
+        $identifier = isset($_POST['membership_number'])
             ? sanitize_text_field(wp_unslash($_POST['membership_number']))
             : '';
 
-        if (!$this->is_valid_membership_number($membership_number)) {
+        $matches = $this->author_service->find_matches_by_identifier($identifier);
+        if (count($matches) === 0) {
+            $current_user = wp_get_current_user();
+            if ($current_user instanceof WP_User && $current_user->ID > 0) {
+                wp_send_json_success([
+                    'name' => $current_user->display_name,
+                    'membership_number' => (string) $current_user->user_login,
+                    'fallback' => true,
+                ]);
+            }
+
             wp_send_json_error([
-                'message' => __('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'),
+                'message' => __('No author found and no logged-in author is available.', 'article-import-wizard'),
             ]);
         }
 
-        $author = $this->author_service->find_by_membership_number($membership_number);
-        if (!$author) {
+        if (count($matches) > 1) {
+            $names = array_values(array_map(static function (WP_User $user): string {
+                return (string) $user->display_name;
+            }, $matches));
             wp_send_json_error([
-                'message' => __('No author found for that membership number.', 'article-import-wizard'),
+                'message' => sprintf(
+                    __('Several authors match. Please be more specific: %s', 'article-import-wizard'),
+                    implode(', ', $names)
+                ),
             ]);
         }
 
-        wp_send_json_success(['name' => $author->display_name]);
+        $author = $matches[0];
+        wp_send_json_success([
+            'name' => $author->display_name,
+            'membership_number' => (string) $author->user_login,
+        ]);
     }
 
     public function render_page(): void
@@ -145,9 +164,26 @@ class AIW_Wizard_Controller
 
         check_admin_referer('aiw_preview_import_nonce');
 
-        $membership_number = isset($_POST['aiw_membership_number'])
+        $author_identifier = isset($_POST['aiw_membership_number'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_membership_number']))
             : '';
+
+        $author_matches = $this->author_service->find_matches_by_identifier($author_identifier);
+        if (count($author_matches) === 0) {
+            $attributed_author = wp_get_current_user();
+            if (!$attributed_author instanceof WP_User || $attributed_author->ID <= 0) {
+                $this->redirect_with_error(__('No author found and no logged-in author is available.', 'article-import-wizard'));
+            }
+        } elseif (count($author_matches) > 1) {
+            $this->redirect_with_error(__('Several authors match this name. Please enter a more specific name or the five-digit membership number.', 'article-import-wizard'));
+        } else {
+            $attributed_author = $author_matches[0];
+        }
+
+        $membership_number = (string) $attributed_author->user_login;
+        if ($membership_number === '') {
+            $this->redirect_with_error(__('The selected author account has no username.', 'article-import-wizard'));
+        }
 
         $post_title = isset($_POST['aiw_post_title'])
             ? sanitize_text_field(wp_unslash($_POST['aiw_post_title']))
@@ -200,14 +236,6 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('You do not have permission to create categories.', 'article-import-wizard'));
         }
 
-        if ($membership_number === '') {
-            $this->redirect_with_error(__('Membership number is required.', 'article-import-wizard'));
-        }
-
-        if (!$this->is_valid_membership_number($membership_number)) {
-            $this->redirect_with_error(__('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'));
-        }
-
         if ($travel_date !== '' && !$this->is_valid_iso_date($travel_date)) {
             $this->redirect_with_error(__('Please select a valid travel date.', 'article-import-wizard'));
         }
@@ -216,10 +244,6 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('Please select at least one category.', 'article-import-wizard'));
         }
 
-        $attributed_author = $this->author_service->find_by_membership_number($membership_number);
-        if (!$attributed_author) {
-            $this->redirect_with_error(__('No user found for that membership number.', 'article-import-wizard'));
-        }
 
         $doc_parse = $this->parse_uploaded_docx();
         if (!empty($doc_parse['error'])) {

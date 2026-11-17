@@ -17,7 +17,8 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 - Generates a full preview before saving or publishing a post
 - Lets editors with publishing permission choose draft or immediate publication
 - Prevents users without `publish_posts` permission from publishing
-- Resolves the public author from a required membership number (WordPress username)
+- Resolves the public author from a membership number or author name
+- Falls back to the currently logged-in WordPress user when no matching author is found
 - Keeps the importing operator in private audit metadata
 - Requires at least one existing or newly created category
 - Uploads a featured image, configurable inline images, and an author image

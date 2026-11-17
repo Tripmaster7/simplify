@@ -285,10 +285,10 @@ if (!defined('ABSPATH')) {
 
                 <table class="form-table" role="presentation">
                     <tr>
-                        <th scope="row"><label for="aiw_membership_number"><?php esc_html_e('Membership Number', 'article-import-wizard'); ?></label></th>
+                        <th scope="row"><label for="aiw_membership_number"><?php esc_html_e('Author or Membership Number', 'article-import-wizard'); ?></label></th>
                         <td>
-                            <input id="aiw_membership_number" name="aiw_membership_number" type="text" class="regular-text" inputmode="numeric" pattern="0[0-9]{4}" maxlength="5" aria-describedby="aiw-membership-help aiw-membership-status" required />
-                            <p id="aiw-membership-help" class="description"><?php esc_html_e('Enter five digits starting with 0.', 'article-import-wizard'); ?></p>
+                            <input id="aiw_membership_number" name="aiw_membership_number" type="text" class="regular-text" aria-describedby="aiw-membership-help aiw-membership-status" />
+                            <p id="aiw-membership-help" class="description"><?php esc_html_e('Enter the author name or five-digit membership number.', 'article-import-wizard'); ?></p>
                             <p id="aiw-membership-status" class="aiw-membership-status" aria-live="polite"></p>
                         </td>
                     </tr>
