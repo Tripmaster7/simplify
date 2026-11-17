@@ -1,15 +1,17 @@
 # Simplify WordPress Article Import Wizard
 
-A guided WordPress admin workflow for turning structured DOCX files into review-ready draft posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
+A guided WordPress admin workflow for turning structured DOCX files into review-ready posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.1.0
+**Current version:** 1.2.0
 
 **Author:** GitHub Copilot and Jens
 
 ## What It Does
 
 - Imports article text and metadata from DOCX files, keeping bold, italic, hyperlinks, and bullet or numbered lists (including nested lists)
-- Generates a full preview before creating a post
+- Generates a full preview before saving or publishing a post
+- Lets editors with publishing permission choose draft or immediate publication
+- Prevents users without `publish_posts` permission from publishing
 - Resolves the public author from a required membership number (WordPress username)
 - Keeps the importing operator in private audit metadata
 - Requires at least one existing or newly created category
@@ -19,8 +21,9 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 - Reuses and updates author biographies stored in WordPress user metadata
 - Validates HTTP and HTTPS links before draft creation
 - Replaces broken links with `CHECK LINK` or reports them without changing the link
-- Creates the finished article as a WordPress draft
+- Creates the finished article as a draft or publishes it immediately, depending on the editor's choice
 - Sends an import summary email with a link to the draft
+- Adds a "back to overview" link to sub-pages of selected pages, such as the chapters of a multi-page guide
 - Includes German admin translations and a printable editorial cheat sheet
 
 ## Requirements
@@ -46,7 +49,8 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 4. Review or update the author's biography. If the field is left empty, a `[BIO: ...]` marker from the DOCX is used, and otherwise the bio already stored on the author's profile. The `[BIO: ...]` marker may span several paragraphs; everything up to the closing `]` is the bio, and each paragraph stays a paragraph in the bio box. Web addresses in the bio (`https://...` or `www....`) become links and are included in the link check.
 5. Generate the preview. The plugin parses the document, maps images, builds block markup, inserts restriction shortcodes, and checks links.
 6. Review warnings, categories, author attribution, and the generated article.
-7. Confirm to create the draft and send the notification email.
+7. Choose whether to save the article as a draft or publish it immediately, then confirm. Users without publishing permission always save drafts.
+8. Open the resulting article or start another import.
 
 Preview data is temporary. If it expires, generate a new preview before creating the draft. Images uploaded for a preview that never becomes a draft are deleted automatically by a daily cleanup task after 24 hours.
 
@@ -56,7 +60,7 @@ Uploading an article again updates the existing one instead of creating a duplic
 
 On an update:
 
-- **Unchanged:** title, author and status. A draft stays a draft; a published article stays published.
+- **Unchanged:** title and author. A draft stays a draft; an existing published article stays published unless it is explicitly recreated as a new article.
 - **Replaced:** article text, categories (the wizard selection), restriction placement, and the bio in the bio box (and on the author's profile).
 - **Pictures:** a newly uploaded picture replaces that slot; slots without a new upload keep their previous picture. A new headline picture replaces the featured image; otherwise it is kept.
 - **Post date:** set from `[WRITING_DATE]` if present, otherwise kept.
@@ -126,6 +130,12 @@ The settings page controls:
 
 The inline image slots and broken-link handling can be adjusted for an individual import before generating its preview.
 
+## Page Navigation
+
+Under **Page Navigation > Back Link on Sub-Pages**, the settings page lists every page that has sub-pages. For each selected page, its published sub-pages show a link back to it at the top and bottom, for example "← Zurück zur Übersicht: dzg Ausrüstungs Ratgeber" on each chapter of a guide.
+
+The link is added when the page is displayed and is not stored in the page content, so editing or replacing a sub-page never removes or duplicates it, and it always uses the overview's current title and address. It only appears while the overview page is published and not password-protected. It uses the CSS class `aiw-back-link`.
+
 ## Author Attribution and Audit Data
 
 The attributed author and importing operator are intentionally separate:
@@ -142,7 +152,9 @@ The plugin also records the source filename, import time, selected categories, r
 - Every import action uses WordPress nonce verification and capability checks.
 - Membership numbers, settings, text fields, IDs, and uploaded filenames are sanitized.
 - Only `.docx` files are accepted by the import handler.
-- Generated posts always use `draft` status.
+- Uploaded DOCX archives are size- and entry-count limited.
+- New posts use the editor's selected status: draft or publish.
+- Publishing is enforced server-side and requires the WordPress `publish_posts` capability.
 - Link checks use WordPress's safe HTTP API, so URLs pointing at private or loopback addresses are not requested.
 - The operator identity is never inserted into public article content.
 

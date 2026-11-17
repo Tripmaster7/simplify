@@ -86,6 +86,7 @@ class AIW_Admin_Menu
             'membershipCheckingMessage' => __('Checking membership number...', 'article-import-wizard'),
             'membershipAuthorLabel' => __('Author:', 'article-import-wizard'),
             'membershipRequestError' => __('The membership number could not be checked. Please try again.', 'article-import-wizard'),
+            'categoryNewLabel' => __('New', 'article-import-wizard'),
         ]);
     }
 }

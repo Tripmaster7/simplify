@@ -96,3 +96,18 @@
 .aiw-membership-status--error {
     color: #b32d2e;
 }
+
+.aiw-start-checklist {
+    margin: 16px 0 20px;
+    padding: 14px 16px;
+    border-left: 4px solid #2271b1;
+    background: #f0f6fc;
+}
+
+.aiw-start-checklist ol {
+    margin: 8px 0 10px 20px;
+}
+
+.aiw-new-article-status {
+    margin: 12px 0;
+}

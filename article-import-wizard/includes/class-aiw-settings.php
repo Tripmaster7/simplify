@@ -12,6 +12,7 @@ class AIW_Settings
     public const OPTION_NOTIFY_EMAIL = 'aiw_notify_email';
     public const OPTION_LINK_CHECK_TIMEOUT = 'aiw_link_check_timeout_ms';
     public const OPTION_REPLACE_BROKEN_LINKS_MODE = 'aiw_replace_broken_links_mode';
+    public const OPTION_BACK_LINK_PARENT_IDS = 'aiw_back_link_parent_ids';
 
     public const DEFAULT_RESTRICTION_START = '[restrict]';
     public const DEFAULT_RESTRICTION_END = '[/restrict]';
@@ -106,6 +107,12 @@ class AIW_Settings
             'default' => 'replace'
         ]);
 
+        register_setting('aiw_settings_group', self::OPTION_BACK_LINK_PARENT_IDS, [
+            'type' => 'array',
+            'sanitize_callback' => [$this, 'sanitize_back_link_parent_ids'],
+            'default' => []
+        ]);
+
         add_settings_section(
             'aiw_main_section',
             __('Import Defaults', 'article-import-wizard'),
@@ -173,6 +180,96 @@ class AIW_Settings
             'aiw-settings',
             'aiw_main_section'
         );
+
+        add_settings_section(
+            'aiw_navigation_section',
+            __('Page Navigation', 'article-import-wizard'),
+            '__return_false',
+            'aiw-settings'
+        );
+
+        add_settings_field(
+            self::OPTION_BACK_LINK_PARENT_IDS,
+            __('Back Link on Sub-Pages', 'article-import-wizard'),
+            [$this, 'render_back_link_parents_field'],
+            'aiw-settings',
+            'aiw_navigation_section'
+        );
+    }
+
+    public function render_back_link_parents_field(): void
+    {
+        $selected = self::get_back_link_parent_ids();
+        $candidate_ids = array_unique(array_merge($this->get_pages_with_sub_pages(), $selected));
+
+        if (empty($candidate_ids)) {
+            echo '<p class="description">' . esc_html__('No pages with sub-pages found.', 'article-import-wizard') . '</p>';
+            return;
+        }
+
+        $pages = get_posts([
+            'post_type' => 'page',
+            'post_status' => 'any',
+            'post__in' => $candidate_ids,
+            'posts_per_page' => -1,
+            'orderby' => 'title',
+            'order' => 'ASC',
+        ]);
+
+        echo '<fieldset>';
+        foreach ($pages as $page) {
+            echo '<label><input type="checkbox" name="' . esc_attr(self::OPTION_BACK_LINK_PARENT_IDS) . '[]" value="' . esc_attr((string) $page->ID) . '"' . checked(in_array((int) $page->ID, $selected, true), true, false) . ' /> '
+                . esc_html(get_the_title($page) !== '' ? get_the_title($page) : '#' . $page->ID) . '</label><br />';
+        }
+        echo '</fieldset>';
+        echo '<p class="description">' . esc_html__('Sub-pages of the selected pages show a link back to them at the top and bottom, for example the chapters of a guide linking back to its table of contents.', 'article-import-wizard') . '</p>';
+    }
+
+    /**
+     * IDs of pages that have at least one sub-page (in any status except trash).
+     *
+     * @return int[]
+     */
+    private function get_pages_with_sub_pages(): array
+    {
+        $parents = get_posts([
+            'post_type' => 'page',
+            'post_status' => ['publish', 'draft', 'pending', 'private', 'future'],
+            'posts_per_page' => -1,
+            'post_parent__not_in' => [0],
+            'fields' => 'id=>parent',
+            'no_found_rows' => true,
+        ]);
+
+        return array_values(array_unique(array_filter(array_map('intval', $parents))));
+    }
+
+    public function sanitize_back_link_parent_ids($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $ids = array_unique(array_filter(array_map('intval', $value), static function (int $id): bool {
+            return $id > 0 && get_post_type($id) === 'page';
+        }));
+
+        return array_values($ids);
+    }
+
+    /**
+     * @return int[]
+     */
+    public static function get_back_link_parent_ids(): array
+    {
+        $value = get_option(self::OPTION_BACK_LINK_PARENT_IDS, []);
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('intval', $value), static function (int $id): bool {
+            return $id > 0;
+        }));
     }
 
     public function render_text_field(array $args): void

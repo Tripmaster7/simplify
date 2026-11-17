@@ -22,7 +22,10 @@ if (!defined('ABSPATH')) {
                 <?php $decoded_edit_url = esc_url_raw(rawurldecode(sanitize_text_field(wp_unslash($_GET['aiw_edit_url'])))); ?>
                 <p>
                     <a class="button button-primary" href="<?php echo esc_url($decoded_edit_url); ?>">
-                        <?php esc_html_e('Open Draft', 'article-import-wizard'); ?>
+                        <?php esc_html_e('Open Article', 'article-import-wizard'); ?>
+                    </a>
+                    <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=aiw-import-wizard')); ?>">
+                        <?php esc_html_e('Import Another Article', 'article-import-wizard'); ?>
                     </a>
                 </p>
             <?php endif; ?>
@@ -71,11 +74,11 @@ if (!defined('ABSPATH')) {
 
             <table class="form-table" role="presentation">
                 <tr>
-                    <th scope="row"><?php esc_html_e('Restriction Start Shortcode', 'article-import-wizard'); ?></th>
+                    <th scope="row"><?php esc_html_e('Protected Section Start', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['restriction_start']); ?></td>
                 </tr>
                 <tr>
-                    <th scope="row"><?php esc_html_e('Restriction End Shortcode', 'article-import-wizard'); ?></th>
+                    <th scope="row"><?php esc_html_e('Protected Section End', 'article-import-wizard'); ?></th>
                     <td><?php echo esc_html((string) $preview_data['restriction_end']); ?></td>
                 </tr>
                 <tr>
@@ -132,7 +135,7 @@ if (!defined('ABSPATH')) {
                 </tr>
             </table>
 
-            <h3><?php esc_html_e('Validation', 'article-import-wizard'); ?></h3>
+            <h3><?php esc_html_e('Problems to Check', 'article-import-wizard'); ?></h3>
             <?php
             $invalid_links = isset($preview_data['validation_report']['invalid_links']) && is_array($preview_data['validation_report']['invalid_links'])
                 ? $preview_data['validation_report']['invalid_links']
@@ -183,18 +186,35 @@ if (!defined('ABSPATH')) {
                 <input type="hidden" name="action" value="aiw_create_draft" />
                 <input type="hidden" name="aiw_preview_token" value="<?php echo esc_attr($preview_token); ?>" />
                 <?php if ($update_post_id > 0) : ?>
+                    <input type="hidden" name="aiw_confirm_update_post_id" value="<?php echo esc_attr((string) $update_post_id); ?>" />
                     <p>
                         <label>
                             <input type="checkbox" name="aiw_create_new" value="1" id="aiw_create_new" />
                             <?php esc_html_e('Create as a new article instead (the existing article stays unchanged)', 'article-import-wizard'); ?>
                         </label>
                     </p>
+                    <?php if (current_user_can('publish_posts')) : ?>
+                        <div id="aiw_new_article_status" class="aiw-new-article-status" hidden>
+                            <p>
+                                <label for="aiw_import_status"><strong><?php esc_html_e('After review', 'article-import-wizard'); ?></strong></label>
+                                <select id="aiw_import_status" name="aiw_import_status">
+                                    <option value="draft"><?php esc_html_e('Save as draft', 'article-import-wizard'); ?></option>
+                                    <option value="publish"><?php esc_html_e('Publish immediately', 'article-import-wizard'); ?></option>
+                                </select>
+                            </p>
+                            <p class="description"><?php esc_html_e('Publishing will make the article publicly visible as soon as you confirm.', 'article-import-wizard'); ?></p>
+                        </div>
+                    <?php else : ?>
+                        <input type="hidden" name="aiw_import_status" value="draft" />
+                    <?php endif; ?>
                     <?php submit_button($update_is_live ? __('Update Published Article', 'article-import-wizard') : __('Update Article', 'article-import-wizard'), 'primary', 'submit', false, ['id' => 'aiw_confirm_button']); ?>
                     <script>
                         (function () {
                             var checkbox = document.getElementById('aiw_create_new');
                             var button = document.getElementById('aiw_confirm_button');
-                            if (!checkbox || !button) {
+                            var form = button ? button.closest('form') : null;
+                            var statusBox = document.getElementById('aiw_new_article_status');
+                            if (!checkbox || !button || !form) {
                                 return;
                             }
                             var updateLabel = button.value;
@@ -202,11 +222,42 @@ if (!defined('ABSPATH')) {
                                 button.value = checkbox.checked
                                     ? '<?php echo esc_js(__('Create Draft From Preview', 'article-import-wizard')); ?>'
                                     : updateLabel;
+                                if (statusBox) {
+                                    statusBox.hidden = !checkbox.checked;
+                                }
+                            });
+                            <?php if ($update_is_live) : ?>
+                            form.addEventListener('submit', function (event) {
+                                if (!checkbox.checked && !window.confirm('<?php echo esc_js(__('This article is published. Confirming replaces its live text, pictures, categories and author bio. Continue?', 'article-import-wizard')); ?>')) {
+                                    event.preventDefault();
+                                }
+                            });
+                            <?php endif; ?>
+                            form.addEventListener('submit', function (event) {
+                                if (checkbox.checked) {
+                                    var statusSelect = document.getElementById('aiw_import_status');
+                                    if (statusSelect && statusSelect.value === 'publish' && !window.confirm('<?php echo esc_js(__('The new article will be published publicly immediately. Continue?', 'article-import-wizard')); ?>')) {
+                                        event.preventDefault();
+                                    }
+                                }
                             });
                         })();
                     </script>
                 <?php else : ?>
-                    <?php submit_button(__('Create Draft From Preview', 'article-import-wizard'), 'primary', 'submit', false); ?>
+                    <?php if (current_user_can('publish_posts')) : ?>
+                        <p>
+                            <label for="aiw_import_status"><strong><?php esc_html_e('After review', 'article-import-wizard'); ?></strong></label>
+                            <select id="aiw_import_status" name="aiw_import_status">
+                                <option value="draft"><?php esc_html_e('Save as draft', 'article-import-wizard'); ?></option>
+                                <option value="publish"><?php esc_html_e('Publish immediately', 'article-import-wizard'); ?></option>
+                            </select>
+                        </p>
+                        <p class="description"><?php esc_html_e('Publishing will make the article publicly visible as soon as you confirm.', 'article-import-wizard'); ?></p>
+                    <?php else : ?>
+                        <input type="hidden" name="aiw_import_status" value="draft" />
+                        <p><?php esc_html_e('This article will be saved as a draft. An editor with publishing permission can publish it later.', 'article-import-wizard'); ?></p>
+                    <?php endif; ?>
+                    <?php submit_button(__('Complete Import', 'article-import-wizard'), 'primary', 'submit', false); ?>
                 <?php endif; ?>
                 <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=aiw-import-wizard')); ?>"><?php esc_html_e('Start New Import', 'article-import-wizard'); ?></a>
             </form>
@@ -214,7 +265,19 @@ if (!defined('ABSPATH')) {
     <?php else : ?>
         <div class="aiw-card">
             <h2><?php esc_html_e('Guided Article Import', 'article-import-wizard'); ?></h2>
-            <p><?php esc_html_e('Upload a DOCX file or provide content manually. Public attribution always uses the membership number user account.', 'article-import-wizard'); ?></p>
+            <p><?php esc_html_e('Prepare one Word document and add the article, pictures and author number below. Public attribution always uses the member account.', 'article-import-wizard'); ?></p>
+
+            <div class="aiw-start-checklist" role="note">
+                <strong><?php esc_html_e('Before you start', 'article-import-wizard'); ?></strong>
+                <ol>
+                    <li><?php esc_html_e('Save the article as a DOCX file in Word.', 'article-import-wizard'); ?></li>
+                    <li><?php esc_html_e('Know the author’s five-digit member number.', 'article-import-wizard'); ?></li>
+                    <li><?php esc_html_e('Prepare the headline picture and any pictures used inside the article.', 'article-import-wizard'); ?></li>
+                </ol>
+                <a href="<?php echo esc_url((string) $help_url); ?>" target="_blank" rel="noopener noreferrer">
+                    <?php esc_html_e('Open the short preparation guide', 'article-import-wizard'); ?>
+                </a>
+            </div>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
                 <?php wp_nonce_field('aiw_preview_import_nonce'); ?>
@@ -394,7 +457,7 @@ if (!defined('ABSPATH')) {
 
                             var option = document.createElement('option');
                             option.value = '__new__' + newCategoryCounter;
-                            option.textContent = categoryName + ' (new)';
+                            option.textContent = categoryName + ' (' + AIWAdmin.categoryNewLabel + ')';
                             option.selected = true;
                             categoriesSelect.appendChild(option);
 

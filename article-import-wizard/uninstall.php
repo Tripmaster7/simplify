@@ -17,6 +17,7 @@ $aiw_options = [
     'aiw_notify_email',
     'aiw_link_check_timeout_ms',
     'aiw_replace_broken_links_mode',
+    'aiw_back_link_parent_ids',
 ];
 
 foreach ($aiw_options as $aiw_option) {

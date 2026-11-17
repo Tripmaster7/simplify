@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Article Import Wizard 1.1.0\n"
+"Project-Id-Version: Article Import Wizard 1.2.0\n"
 "POT-Creation-Date: 2026-08-04 12:30+0000\n"
 "PO-Revision-Date: 2026-08-04 12:30+0000\n"
 "Last-Translator: GitHub Copilot and Jens\n"
@@ -500,3 +500,20 @@ msgstr "Auf die hochgeladene temporäre DOCX-Datei kann nicht zugegriffen werden
 
 msgid "ZipArchive is not available on this server."
 msgstr "ZipArchive ist auf diesem Server nicht verfügbar."
+
+msgid "Page Navigation"
+msgstr "Seiten-Navigation"
+
+msgid "Back Link on Sub-Pages"
+msgstr "Rücklink auf Unterseiten"
+
+msgid "No pages with sub-pages found."
+msgstr "Keine Seiten mit Unterseiten gefunden."
+
+msgid "Sub-pages of the selected pages show a link back to them at the top and bottom, for example the chapters of a guide linking back to its table of contents."
+msgstr "Unterseiten der ausgewählten Seiten zeigen oben und unten einen Link zurück zu ihnen, zum Beispiel die Kapitel eines Ratgebers mit einem Link zurück zum Inhaltsverzeichnis."
+
+#. translators: %s: title of the overview (parent) page
+#, php-format
+msgid "Back to overview: %s"
+msgstr "Zurück zur Übersicht: %s"

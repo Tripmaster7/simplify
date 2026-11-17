@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Article Import Wizard
  * Description: Guided article import workflow for non-technical editors with membership-based author attribution.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: GitHub Copilot and Jens
  * Requires at least: 7.0
  * Requires PHP: 8.3
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AIW_PLUGIN_VERSION', '1.1.0');
+define('AIW_PLUGIN_VERSION', '1.2.0');
 define('AIW_PLUGIN_FILE', __FILE__);
 define('AIW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIW_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -28,6 +28,7 @@ require_once AIW_PLUGIN_DIR . 'includes/class-aiw-link-validator.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-notifier.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-shortcode-service.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-frontend-author.php';
+require_once AIW_PLUGIN_DIR . 'includes/class-aiw-section-navigation.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-settings.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-admin-i18n.php';
 
@@ -60,6 +61,9 @@ add_action('plugins_loaded', static function () {
 
     $frontend_author = new AIW_Frontend_Author();
     $frontend_author->register();
+
+    $section_navigation = new AIW_Section_Navigation();
+    $section_navigation->register();
 
     $settings = new AIW_Settings();
     $settings->register();

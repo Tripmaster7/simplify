@@ -6,6 +6,10 @@ if (!defined('ABSPATH')) {
 
 class AIW_DOCX_Parser
 {
+    private const MAX_ENTRY_COUNT = 2000;
+    private const MAX_ENTRY_SIZE = 10 * 1024 * 1024;
+    private const MAX_UNCOMPRESSED_SIZE = 25 * 1024 * 1024;
+
     public function parse(string $file_path): array
     {
         if (!class_exists('ZipArchive')) {
@@ -34,6 +38,32 @@ class AIW_DOCX_Parser
                 'placeholders' => [],
                 'error' => __('Could not open DOCX file.', 'article-import-wizard'),
             ];
+        }
+
+        $entry_count = $zip->numFiles;
+        if ($entry_count > self::MAX_ENTRY_COUNT) {
+            $zip->close();
+            return $this->parse_error(__('The DOCX file contains too many archive entries.', 'article-import-wizard'));
+        }
+
+        $uncompressed_size = 0;
+        for ($index = 0; $index < $entry_count; $index++) {
+            $stat = $zip->statIndex($index);
+            if (!is_array($stat)) {
+                continue;
+            }
+
+            $entry_size = isset($stat['size']) ? (int) $stat['size'] : 0;
+            if ($entry_size > self::MAX_ENTRY_SIZE) {
+                $zip->close();
+                return $this->parse_error(__('A DOCX archive entry is too large.', 'article-import-wizard'));
+            }
+
+            $uncompressed_size += $entry_size;
+            if ($uncompressed_size > self::MAX_UNCOMPRESSED_SIZE) {
+                $zip->close();
+                return $this->parse_error(__('The DOCX file expands to too much data.', 'article-import-wizard'));
+            }
         }
 
         $document_xml = $zip->getFromName('word/document.xml');
@@ -247,6 +277,20 @@ class AIW_DOCX_Parser
      */
     private array $list_level_ordered = [];
 
+    private function parse_error(string $message): array
+    {
+        return [
+            'title' => '',
+            'subtitle' => '',
+            'content' => '',
+            'writing_date' => '',
+            'doc_author' => '',
+            'links' => [],
+            'placeholders' => [],
+            'error' => $message,
+        ];
+    }
+
     private function load_xml($xml): ?DOMXPath
     {
         if (!is_string($xml) || $xml === '') {
@@ -459,7 +503,7 @@ class AIW_DOCX_Parser
     {
         $document = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
-        $loaded = $document->loadXML($document_xml, LIBXML_NONET | LIBXML_PARSEHUGE);
+        $loaded = $document->loadXML($document_xml, LIBXML_NONET);
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
         if (!$loaded) {

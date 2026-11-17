@@ -333,6 +333,9 @@ class AIW_Wizard_Controller
 
         // On an update, picture slots without a new upload keep the picture they had before.
         $previous_inline_slots = $existing_article instanceof WP_Post ? $this->get_inline_image_slots($existing_article->ID) : [];
+        $previous_headline_image_id = $existing_article instanceof WP_Post
+            ? (int) get_post_thumbnail_id($existing_article->ID)
+            : 0;
         $inline_image_slots = $inline_image_ids + $previous_inline_slots;
         ksort($inline_image_slots);
         $reused_image_slots = array_keys(array_diff_key($previous_inline_slots, $inline_image_ids));
@@ -419,6 +422,7 @@ class AIW_Wizard_Controller
             'source_filename' => $source_filename,
             'broken_link_mode' => $broken_link_mode,
             'headline_image_id' => (int) $headline_image_id,
+            'previous_headline_image_id' => (int) $previous_headline_image_id,
             'inline_image_ids' => array_map('intval', $inline_image_ids),
             'inline_image_slots' => array_map('intval', $inline_image_slots),
             'reused_image_slots' => $reused_image_slots,
@@ -596,6 +600,13 @@ class AIW_Wizard_Controller
 
         $update_post_id = isset($preview['update_post_id']) ? (int) $preview['update_post_id'] : 0;
         $is_update = $update_post_id > 0 && empty($_POST['aiw_create_new']);
+        $confirmed_update_post_id = isset($_POST['aiw_confirm_update_post_id'])
+            ? (int) wp_unslash($_POST['aiw_confirm_update_post_id'])
+            : 0;
+        if ($is_update && $confirmed_update_post_id !== $update_post_id) {
+            $this->store_preview_data($preview_token, $preview);
+            $this->redirect_with_error(__('The article selected for update changed. Please review the preview again.', 'article-import-wizard'));
+        }
 
         if ($is_update) {
             // Re-check at confirmation time: the article may have been trashed, reassigned or locked
@@ -617,9 +628,19 @@ class AIW_Wizard_Controller
                 'post_category' => $category_ids,
             ];
         } else {
+            $requested_status = isset($_POST['aiw_import_status'])
+                ? sanitize_key(wp_unslash($_POST['aiw_import_status']))
+                : 'draft';
+
+            if ($requested_status === 'publish' && !current_user_can('publish_posts')) {
+                $this->store_preview_data($preview_token, $preview);
+                $this->redirect_with_error(__('You do not have permission to publish articles. The import was not completed.', 'article-import-wizard'));
+            }
+
+            $post_status = $requested_status === 'publish' ? 'publish' : 'draft';
             $post_data = [
                 'post_type' => 'post',
-                'post_status' => 'draft',
+                'post_status' => $post_status,
                 'post_title' => (string) $preview['post_title'],
                 'post_content' => (string) $preview['working_content'],
                 'post_author' => $attributed_author_user_id,
@@ -649,6 +670,17 @@ class AIW_Wizard_Controller
         if ($headline_image_id > 0) {
             $this->attach_preview_upload($headline_image_id, (int) $post_id);
             set_post_thumbnail($post_id, $headline_image_id);
+        } elseif (!$is_update && $post_id > 0) {
+            $previous_headline_image_id = isset($preview['previous_headline_image_id'])
+                ? (int) $preview['previous_headline_image_id']
+                : 0;
+            if ($previous_headline_image_id > 0 && get_post_type($previous_headline_image_id) === 'attachment') {
+                wp_update_post([
+                    'ID' => $previous_headline_image_id,
+                    'post_parent' => (int) $post_id,
+                ]);
+                set_post_thumbnail($post_id, $previous_headline_image_id);
+            }
         }
 
         $inline_image_ids = isset($preview['inline_image_ids']) && is_array($preview['inline_image_ids'])
@@ -706,7 +738,9 @@ class AIW_Wizard_Controller
         $message = sprintf(
             $is_update
                 ? __('Article #%1$s updated. Attributed author: %2$s', 'article-import-wizard')
-                : __('Draft #%1$s created. Attributed author: %2$s', 'article-import-wizard'),
+                : ((isset($post_status) && $post_status === 'publish')
+                    ? __('Article #%1$s published. Attributed author: %2$s', 'article-import-wizard')
+                    : __('Draft #%1$s created. Attributed author: %2$s', 'article-import-wizard')),
             $post_id,
             isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : ''
         );
@@ -780,6 +814,9 @@ class AIW_Wizard_Controller
         $tmp_name = $_FILES['aiw_docx_file']['tmp_name'];
         if ($tmp_name === '' || !file_exists($tmp_name)) {
             return $this->empty_doc_parse_payload(__('Uploaded DOCX temp file is not accessible.', 'article-import-wizard'));
+        }
+        if (!is_uploaded_file($tmp_name)) {
+            return $this->empty_doc_parse_payload(__('The uploaded DOCX temp file could not be verified.', 'article-import-wizard'));
         }
 
         return $this->docx_parser->parse($tmp_name);
