@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Article Import Wizard 1.2.0\n"
+"Project-Id-Version: Article Import Wizard 1.2.1\n"
 "POT-Creation-Date: 2026-08-04 12:30+0000\n"
 "PO-Revision-Date: 2026-08-04 12:30+0000\n"
 "Last-Translator: GitHub Copilot and Jens\n"
