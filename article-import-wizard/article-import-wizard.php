@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Article Import Wizard
  * Description: Guided article import workflow for non-technical editors with membership-based author attribution.
- * Version: 1.3.2
+ * Version: 1.3.3
  * Author: GitHub Copilot and Jens
  * Requires at least: 7.0
  * Requires PHP: 8.3
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AIW_PLUGIN_VERSION', '1.3.2');
+define('AIW_PLUGIN_VERSION', '1.3.3');
 define('AIW_PLUGIN_FILE', __FILE__);
 define('AIW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIW_PLUGIN_URL', plugin_dir_url(__FILE__));

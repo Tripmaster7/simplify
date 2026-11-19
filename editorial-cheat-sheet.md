@@ -36,12 +36,14 @@ Required or strongly recommended:
 Optional:
 - [BIO: Short author bio text] (may span several paragraphs; end it with ])
 - [RESTRICT] (start of the members-only part; without it: automatically, by default after the 2nd paragraph or earlier once the text reaches 1,000 characters)
-- [HEADER 3 Headline 3]
-- [HEADER 4 Headline 4]
+- [HEADER Section headline]
+- [HEADER 3 Section headline]
+- [HEADER 4 Section headline]
 
 Heading rule:
-- H1 and H2 are reserved for article title and subtitle only.
-- Use only [HEADER 3 ...] and [HEADER 4 ...] in the article body.
+- H1 is reserved for the article title.
+- H2 comes from the subtitle or from a plain `[HEADER ...]` in the body text.
+- For deeper levels in the body text, use `[HEADER 3 ...]` and `[HEADER 4 ...]`.
 
 The end of the members-only part is added automatically after the last paragraph; the author bio is always public.
 
@@ -81,11 +83,14 @@ Second paragraph with image marker [Bild 1: Caption].
 
 Another paragraph with [Bild 2].
 
+[HEADER Section headline]
+Body paragraph for level H2.
+
 [HEADER 3 Background]
-Body paragraph for section level 3.
+Body paragraph for level H3.
 
 [HEADER 4 Detail]
-Body paragraph for section level 4.
+Body paragraph for level H4.
 
 [BIO: ]
 

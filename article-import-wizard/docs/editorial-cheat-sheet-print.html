@@ -124,6 +124,21 @@
         padding: 0;
       }
 
+      /* Compact print layout so the sheet fits on one A4 page. Columns instead of the grid let
+         short cards fill the gaps that equal-height grid rows leave. */
+      body { line-height: 1.25; }
+      h1 { font-size: 22px; margin-bottom: 2px; }
+      .subtitle { font-size: 12px; margin-bottom: 8px; }
+      .grid { display: block; column-count: 2; column-gap: 5mm; }
+      .card { padding: 8px 10px; margin-bottom: 7px; }
+      .card h2 { font-size: 14.5px; margin-bottom: 5px; }
+      ol, ul { font-size: 12px; padding-left: 17px; }
+      ul + ul { margin-top: 4px; }
+      li { margin: 1px 0; }
+      .tag-list li { margin: 2px 0; padding: 2px 6px; font-size: 11px; }
+      .template { margin-top: 0; padding: 6px 8px; font-size: 11px; line-height: 1.25; }
+      .footer { margin-top: 6px; padding-top: 4px; font-size: 10.5px; }
+
       a { color: inherit; text-decoration: none; }
     }
   </style>

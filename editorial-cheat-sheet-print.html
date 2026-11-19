@@ -124,6 +124,21 @@
         padding: 0;
       }
 
+      /* Compact print layout so the sheet fits on one A4 page. Columns instead of the grid let
+         short cards fill the gaps that equal-height grid rows leave. */
+      body { line-height: 1.25; }
+      h1 { font-size: 22px; margin-bottom: 2px; }
+      .subtitle { font-size: 12px; margin-bottom: 8px; }
+      .grid { display: block; column-count: 2; column-gap: 5mm; }
+      .card { padding: 8px 10px; margin-bottom: 7px; }
+      .card h2 { font-size: 14.5px; margin-bottom: 5px; }
+      ol, ul { font-size: 12px; padding-left: 17px; }
+      ul + ul { margin-top: 4px; }
+      li { margin: 1px 0; }
+      .tag-list li { margin: 2px 0; padding: 2px 6px; font-size: 11px; }
+      .template { margin-top: 0; padding: 6px 8px; font-size: 11px; line-height: 1.25; }
+      .footer { margin-top: 6px; padding-top: 4px; font-size: 10.5px; }
+
       a { color: inherit; text-decoration: none; }
     }
   </style>
@@ -163,17 +178,19 @@
         <ul class="tag-list">
           <li>[TITLE: Your headline]</li>
           <li>[SUBTITLE: Your sub-headline]</li>
-          <li>[HEADER 3 Headline 3] (body H3 block)</li>
-          <li>[HEADER 4 Headline 4] (body H4 block)</li>
+          <li>[HEADER Section headline] (H2 in the body)</li>
+          <li>[HEADER 3 Section headline] (H3 in the body)</li>
+          <li>[HEADER 4 Section headline] (H4 in the body)</li>
           <li>[WRITING_DATE: 2026-08-04] (post date; 04.08.2026 also works)</li>
           <li>[AUTHOR_MEMBERSHIP: 01234]</li>
           <li>[BIO: Short author bio] (optional; may span several paragraphs, end with ])</li>
-          <li>[RESTRICT] (start of members-only part; default: after 2nd paragraph, or 1st if 1,000+ characters)</li>
+          <li>[RESTRICT] (start of members-only part; otherwise automatic, by default after the 2nd paragraph or earlier from 1,000 characters)</li>
           <li>[RESTRICT_START] = [RESTRICT]; [RESTRICT_END] is ignored (legacy)</li>
         </ul>
         <ul>
-          <li>H1 and H2 are reserved for title/subtitle only.</li>
-          <li>Use HEADER 3 and HEADER 4 tags inside article body.</li>
+          <li>H1 is reserved for the title.</li>
+          <li>H2 comes from the subtitle or a plain [HEADER] tag in the body.</li>
+          <li>For deeper levels in the body, use [HEADER 3] and [HEADER 4].</li>
           <li>The members-only part always ends before the author bio; the bio is public.</li>
         </ul>
       </article>
@@ -210,11 +227,14 @@ Second paragraph with [Bild 1: Caption].
 
 Third paragraph with [Bild 2].
 
+[HEADER Section headline]
+Paragraph at level H2...
+
 [HEADER 3 Background]
-Section paragraph...
+Paragraph at level H3...
 
 [HEADER 4 Detail]
-Detail paragraph...
+Paragraph at level H4...
 
 [BIO: ]</div>
       </article>
