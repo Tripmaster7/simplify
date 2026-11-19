@@ -4,20 +4,25 @@ Diese Seite ausdrucken und am Arbeitsplatz bereithalten.
 
 ## 1) Schnellablauf
 1. Artikel in Word als `.docx` vorbereiten.
-2. In WordPress den Artikel-Import-Assistenten öffnen.
-3. Die Mitgliedsnummer des echten Autors eingeben.
+2. In WordPress anmelden. Der Artikel-Import-Assistent öffnet sich direkt (sonst im Menü auf **Artikel-Import** klicken).
+3. Den Namen oder die Mitgliedsnummer des echten Autors eingeben.
 4. DOCX hochladen.
-5. Aufmacherbild und Inline-Bilder hochladen.
-6. Auf Vorschau erzeugen klicken.
-7. Warnungen zu Links und Bildern prüfen.
-8. Auf Entwurf aus Vorschau erstellen klicken.
+5. Kategorien prüfen. Manche sind eventuell schon vorausgewählt.
+6. Aufmacherbild und Inline-Bilder hochladen.
+7. Auf **Vorschau erzeugen** klicken.
+8. Warnungen zu Autor, Links und Bildern prüfen.
+9. Bei **Nach der Prüfung** die Auswahl prüfen: als Entwurf speichern oder direkt veröffentlichen.
+10. Auf **Import abschließen** klicken.
+
+Im Menü sehen Sie nur **Beiträge**, **Medien** und **Artikel-Import**. Profil und Abmelden finden Sie oben rechts unter Ihrem Namen.
 
 ## 2) Grundregeln
 - Immer als DOCX (`.docx`) speichern, nicht als `.doc`.
-- Die Mitgliedsnummer muss korrekt sein.
+- Der Autor muss stimmen: vollständigen Namen oder Mitgliedsnummer eingeben.
+- Wird kein passender Autor gefunden, bekommt der Artikel den Standardautor. Die Vorschau zeigt dann eine Warnung. In diesem Fall die Eingabe korrigieren und die Vorschau neu erzeugen.
+- Passen mehrere Autoren zum Namen, einen genaueren Namen oder die Mitgliedsnummer eingeben.
 - Das eingeloggte Redaktionskonto ist nur intern relevant.
-- Der öffentliche Autor wird immer über die Mitgliedsnummer bestimmt.
-- Zum Aktualisieren den Artikel mit gleichem Titel und gleicher Mitgliedsnummer erneut hochladen. Titel und Autor bleiben fest; Text, Bilder, Kategorien und Bio werden ersetzt. Nur geänderte Bilder hochladen.
+- Zum Aktualisieren den Artikel mit gleichem Titel und gleichem Autor erneut hochladen. Titel und Autor bleiben fest; Text, Bilder, Kategorien und Bio werden ersetzt. Nur geänderte Bilder hochladen.
 
 ## 3) Metadaten-Tags in der DOCX
 Diese Tags exakt so verwenden.
@@ -74,7 +79,7 @@ Erster Absatz...
 
 Zweiter Absatz mit Bildmarker [Bild 1: Bildunterschrift].
 
-[RESTRICT]  (optional; ohne Marker beginnt der geschützte Teil nach dem 2. Absatz)
+[RESTRICT]  (optional; ohne Marker beginnt der geschützte Teil automatisch, standardmäßig nach dem 2. Absatz)
 
 Weiterer Absatz mit [Bild 2].
 
@@ -101,15 +106,18 @@ Vor dem Fertigstellen des Entwurfs:
 
 ## 8) Abschluss-Checkliste vor dem Upload
 - DOCX-Format bestätigt
-- Mitgliedsnummer bestätigt
+- Autor bestätigt (Name oder Mitgliedsnummer), keine Autor-Warnung in der Vorschau
+- Kategorien geprüft
 - Metadaten-Tags ausgefüllt
 - Bildmarker und Uploads passen zusammen
 - Vorschau geprüft
-- Entwurf erstellt
+- Entwurf oder Veröffentlichen bewusst gewählt
+- Import abgeschlossen
 
 ## 9) Häufige Fehler
 - Falscher Dateityp (`.doc` statt `.docx`)
-- Fehlende Mitgliedsnummer
+- Autor fehlt oder ist falsch geschrieben: Der Artikel bekommt dann den Standardautor
+- Vorausgewählte Kategorien oder „Direkt veröffentlichen“ nicht geprüft
 - Defektes Markerformat (fehlende schließende `]`)
 - Bildnummern übersprungen (`Bild 1`, `Bild 3`)
 - Vorschau-Schritt vergessen

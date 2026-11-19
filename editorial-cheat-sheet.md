@@ -4,20 +4,25 @@ Print this page and keep it next to your workstation.
 
 ## 1) Quick Workflow
 1. Prepare article in Word (.docx).
-2. Open WordPress > Article Import Wizard.
-3. Enter membership number of the real author.
+2. Log in to WordPress. The Article Import Wizard opens directly (otherwise click **Article Import** in the menu).
+3. Enter the name or membership number of the real author.
 4. Upload DOCX.
-5. Upload headline image and inline images.
-6. Click Generate Preview.
-7. Check warnings (links/images).
-8. Click Create Draft From Preview.
+5. Check the categories. Some may already be preselected.
+6. Upload headline image and inline images.
+7. Click **Generate Preview**.
+8. Check warnings (author, links, images).
+9. Under **After review**, check the choice: save as draft or publish immediately.
+10. Click **Complete Import**.
+
+The menu only shows **Posts**, **Media** and **Article Import**. Your profile and log out are at the top right under your name.
 
 ## 2) Golden Rules
 - Always save as DOCX (.docx), not .doc.
-- Membership number must be correct.
+- The author must be right: enter the full name or the membership number.
+- If no matching author is found, the article gets the default author and the preview shows a warning. Correct the entry and generate the preview again.
+- If several authors match the name, enter a more specific name or the membership number.
 - The logged-in editor is internal only.
-- Public author is always the member from membership number.
-- To update an article, upload it again with the same title and membership number. Title and author cannot change; text, pictures, categories and bio are replaced. Only upload pictures that changed.
+- To update an article, upload it again with the same title and author. Title and author cannot change; text, pictures, categories and bio are replaced. Only upload pictures that changed.
 
 ## 3) Metadata Tags (inside DOCX)
 Use these tags exactly as written.
@@ -72,7 +77,7 @@ First paragraph...
 
 Second paragraph with image marker [Bild 1: Caption].
 
-[RESTRICT]  (optional; without it the restricted part starts after the 2nd paragraph)
+[RESTRICT]  (optional; without it the restricted part starts automatically, by default after the 2nd paragraph)
 
 Another paragraph with [Bild 2].
 
@@ -96,15 +101,18 @@ Before finalizing draft:
 
 ## 8) Final Pre-Upload Checklist
 - DOCX format confirmed
-- Membership number confirmed
+- Author confirmed (name or membership number), no author warning in the preview
+- Categories checked
 - Metadata tags filled
 - Image markers and uploads match
 - Preview reviewed
-- Draft created
+- Draft or publish chosen on purpose
+- Import completed
 
 ## 9) Common Mistakes
 - Wrong file type (.doc instead of .docx)
-- Missing membership number
+- Author missing or misspelled: the article then gets the default author
+- Preselected categories or "Publish immediately" not checked
 - Broken marker format (missing closing ])
 - Image numbers skipped (Bild 1, Bild 3)
 - Forgetting preview step
