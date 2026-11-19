@@ -28,6 +28,7 @@ $aiw_options = [
     'aiw_author_profile_update',
     'aiw_show_bio_box',
     'aiw_wizard_roles',
+    'aiw_simple_admin_menu',
     'aiw_notify_enabled',
 ];
 

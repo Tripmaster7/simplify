@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Article Import Wizard
  * Description: Guided article import workflow for non-technical editors with membership-based author attribution.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: GitHub Copilot and Jens
  * Requires at least: 7.0
  * Requires PHP: 8.3
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AIW_PLUGIN_VERSION', '1.3.0');
+define('AIW_PLUGIN_VERSION', '1.3.1');
 define('AIW_PLUGIN_FILE', __FILE__);
 define('AIW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIW_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -30,6 +30,7 @@ require_once AIW_PLUGIN_DIR . 'includes/class-aiw-shortcode-service.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-frontend-author.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-section-navigation.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-settings.php';
+require_once AIW_PLUGIN_DIR . 'includes/class-aiw-simple-admin.php';
 require_once AIW_PLUGIN_DIR . 'includes/class-aiw-admin-i18n.php';
 
 add_action('plugins_loaded', static function () {
@@ -67,6 +68,9 @@ add_action('plugins_loaded', static function () {
 
     $settings = new AIW_Settings();
     $settings->register();
+
+    $simple_admin = new AIW_Simple_Admin();
+    $simple_admin->register();
 
     $admin_i18n = new AIW_Admin_I18n();
     $admin_i18n->register();

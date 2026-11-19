@@ -25,6 +25,7 @@ class AIW_Settings
     public const OPTION_PROFILE_UPDATE = 'aiw_author_profile_update';
     public const OPTION_SHOW_BIO_BOX = 'aiw_show_bio_box';
     public const OPTION_WIZARD_ROLES = 'aiw_wizard_roles';
+    public const OPTION_SIMPLE_ADMIN = 'aiw_simple_admin_menu';
     public const OPTION_NOTIFY_ENABLED = 'aiw_notify_enabled';
     public const OPTION_NOTIFY_EMAIL = 'aiw_notify_email';
     public const OPTION_BACK_LINK_PARENT_IDS = 'aiw_back_link_parent_ids';
@@ -120,6 +121,7 @@ class AIW_Settings
         $this->register_option(self::OPTION_PROFILE_UPDATE, 'string', [$this, 'sanitize_profile_update'], 'always');
         $this->register_option(self::OPTION_SHOW_BIO_BOX, 'boolean', 'rest_sanitize_boolean', true);
         $this->register_option(self::OPTION_WIZARD_ROLES, 'array', [$this, 'sanitize_wizard_roles'], []);
+        $this->register_option(self::OPTION_SIMPLE_ADMIN, 'boolean', 'rest_sanitize_boolean', true);
         $this->register_option(self::OPTION_NOTIFY_ENABLED, 'boolean', 'rest_sanitize_boolean', true);
         $this->register_option(self::OPTION_NOTIFY_EMAIL, 'string', 'sanitize_email', get_option('admin_email', ''));
         $this->register_option(self::OPTION_BACK_LINK_PARENT_IDS, 'array', [$this, 'sanitize_back_link_parent_ids'], []);
@@ -229,6 +231,11 @@ class AIW_Settings
             'aiw-settings',
             'aiw_access_section'
         );
+        $this->add_field(self::OPTION_SIMPLE_ADMIN, __('Simplified Admin Menu', 'article-import-wizard'), 'render_checkbox_field', 'aiw_access_section', [
+            'default' => true,
+            'label' => __('Show only Posts, Media and Article Import to everyone except administrators', 'article-import-wizard'),
+            'description' => __('Also hides the dashboard and most of the top toolbar, and opens the import wizard after login. Administrators always see the full menu. This only tidies up the screen; what users may do is still decided by their role.', 'article-import-wizard'),
+        ]);
 
         // Notifications.
         $this->add_section('aiw_notify_section', __('Notifications', 'article-import-wizard'));
@@ -660,6 +667,11 @@ class AIW_Settings
     public static function show_bio_box(): bool
     {
         return self::get_option_bool(self::OPTION_SHOW_BIO_BOX, true);
+    }
+
+    public static function simple_admin_enabled(): bool
+    {
+        return self::get_option_bool(self::OPTION_SIMPLE_ADMIN, true);
     }
 
     public static function notifications_enabled(): bool

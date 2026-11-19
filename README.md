@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.3.0
+**Current version:** 1.3.1
 
 **Author:** GitHub Copilot and Jens
 
@@ -153,6 +153,7 @@ The settings page (Settings → Article Import Wizard) is only available to admi
 **Access**
 
 - Who may use the wizard: the roles allowed to open it. Administrators always have access. With no role selected (default), every role that has `edit_posts` and `upload_files` can use it. The menu entry is hidden from everyone else.
+- Simplified admin menu (default: on): everyone except administrators sees only **Posts**, **Media** and **Article Import** in the admin menu, also hiding menus added by other plugins. The dashboard is hidden and redirects to the wizard (or to the post list for users who may not use it), login opens the wizard, and the top toolbar keeps only the site link and the account menu (profile, log out). This only tidies up the screen; what users may do is still decided by their WordPress role.
 
 **Notifications**
 
