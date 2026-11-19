@@ -35,16 +35,13 @@ class AIW_Author_Service
             return [];
         }
 
-        if (preg_match('/^0\d{4}$/', $identifier) === 1) {
+        if (AIW_Settings::is_membership_number($identifier)) {
             $user = $this->find_by_membership_number($identifier);
             return $user instanceof WP_User ? [$user] : [];
         }
 
-        $users = get_users([
-            'number' => 500,
-            'fields' => 'all',
-        ]);
-        if (!is_array($users) || empty($users)) {
+        $users = $this->find_candidates($identifier);
+        if (empty($users)) {
             return [];
         }
 
@@ -85,6 +82,66 @@ class AIW_Author_Service
         }
 
         return array_values($unique);
+    }
+
+    /**
+     * Users whose login, display name, first name or last name contains the identifier or one of
+     * its words, so "Max Muster" also finds first name "Max" plus last name "Muster". The
+     * exact/partial ranking in find_matches_by_identifier() narrows these down.
+     *
+     * @return WP_User[]
+     */
+    private function find_candidates(string $identifier): array
+    {
+        $terms = array_filter(explode(' ', $identifier), static function (string $term): bool {
+            return $term !== '';
+        });
+        $terms[] = $identifier;
+
+        $by_id = [];
+        foreach (array_unique($terms) as $term) {
+            $queries = [
+                [
+                    'search' => '*' . $term . '*',
+                    'search_columns' => ['user_login', 'display_name', 'user_nicename'],
+                ],
+                [
+                    'meta_query' => [
+                        'relation' => 'OR',
+                        ['key' => 'first_name', 'value' => $term, 'compare' => 'LIKE'],
+                        ['key' => 'last_name', 'value' => $term, 'compare' => 'LIKE'],
+                    ],
+                ],
+            ];
+
+            foreach ($queries as $query) {
+                foreach (get_users($query + ['fields' => 'all']) as $user) {
+                    if ($user instanceof WP_User) {
+                        $by_id[(int) $user->ID] = $user;
+                    }
+                }
+            }
+        }
+
+        return array_values($by_id);
+    }
+
+    /**
+     * The author used when no author is entered or none matches: the configured default
+     * publisher, otherwise the logged-in user. Null when neither is available.
+     */
+    public function get_fallback_author(): ?WP_User
+    {
+        $publisher_id = AIW_Settings::get_default_publisher_id();
+        if ($publisher_id > 0) {
+            $publisher = get_userdata($publisher_id);
+            if ($publisher instanceof WP_User) {
+                return $publisher;
+            }
+        }
+
+        $current_user = wp_get_current_user();
+        return ($current_user instanceof WP_User && $current_user->ID > 0) ? $current_user : null;
     }
 
     private function normalize_name(string $name): string

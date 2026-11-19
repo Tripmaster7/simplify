@@ -30,7 +30,7 @@ Pflicht oder dringend empfohlen:
 
 Optional:
 - [BIO: Kurzer Autorentext] (darf mehrere Absätze lang sein; mit ] abschließen)
-- [RESTRICT] (Beginn des Mitgliederbereichs; ohne Marker: nach dem 2. Absatz, oder nach dem 1., wenn er 1.000+ Zeichen hat)
+- [RESTRICT] (Beginn des Mitgliederbereichs; ohne Marker: automatisch, standardmäßig nach dem 2. Absatz oder früher bei langen Absätzen ab 1.000 Zeichen)
 - [HEADER Zwischenüberschrift]
 - [HEADER 3 Zwischenüberschrift]
 - [HEADER 4 Zwischenüberschrift]

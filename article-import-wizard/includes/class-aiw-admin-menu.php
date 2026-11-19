@@ -22,11 +22,14 @@ class AIW_Admin_Menu
 
     public function register_menu(): void
     {
+        if (!AIW_Settings::user_can_use_wizard()) {
+            return;
+        }
+
         add_menu_page(
             __('Article Import Wizard', 'article-import-wizard'),
             __('Article Import', 'article-import-wizard'),
-            // The wizard requires edit_posts and upload_files; upload_files implies edit_posts for
-            // core roles, so this hides the menu from users who would only get a permission error.
+            // Role access is checked above; upload_files is the base capability the wizard needs.
             'upload_files',
             'aiw-import-wizard',
             [$this->wizard_controller, 'render_page'],
@@ -82,7 +85,7 @@ class AIW_Admin_Menu
         wp_localize_script('aiw-admin-js', 'AIWAdmin', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'membershipNonce' => wp_create_nonce('aiw_validate_membership'),
-            'membershipFormatMessage' => __('Enter a valid five-digit membership number starting with 0.', 'article-import-wizard'),
+            'membershipFormatMessage' => __('Enter a valid membership number.', 'article-import-wizard'),
             'membershipRequiredMessage' => __('Enter a membership number or author name.', 'article-import-wizard'),
             'membershipCheckingMessage' => __('Checking membership number...', 'article-import-wizard'),
             'membershipAuthorLabel' => __('Author:', 'article-import-wizard'),

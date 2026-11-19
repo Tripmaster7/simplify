@@ -18,6 +18,17 @@ $aiw_options = [
     'aiw_link_check_timeout_ms',
     'aiw_replace_broken_links_mode',
     'aiw_back_link_parent_ids',
+    'aiw_default_publisher_user_id',
+    'aiw_auto_restriction_characters',
+    'aiw_auto_restriction_paragraphs',
+    'aiw_default_post_status',
+    'aiw_default_category_ids',
+    'aiw_ambiguous_author_mode',
+    'aiw_membership_number_pattern',
+    'aiw_author_profile_update',
+    'aiw_show_bio_box',
+    'aiw_wizard_roles',
+    'aiw_notify_enabled',
 ];
 
 foreach ($aiw_options as $aiw_option) {

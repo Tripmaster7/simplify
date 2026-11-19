@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.2.1
+**Current version:** 1.3.0
 
 **Author:** GitHub Copilot and Jens
 
@@ -18,12 +18,12 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 - Lets editors with publishing permission choose draft or immediate publication
 - Prevents users without `publish_posts` permission from publishing
 - Resolves the public author from a membership number or author name
-- Falls back to the currently logged-in WordPress user when no matching author is found
+- Falls back to a configurable default publisher (any editor or author, chosen in the settings) when no matching author is found, or to the currently logged-in WordPress user if none is set. Several matching names can either stop the import or also use the default publisher.
 - Keeps the importing operator in private audit metadata
 - Requires at least one existing or newly created category
 - Uploads a featured image, configurable inline images, and an author image
 - Replaces numbered image markers with WordPress image blocks
-- Restricts every article with configurable shortcodes: the start goes at the `[RESTRICT]` marker or automatically after the 2nd paragraph (earlier if the first paragraph reaches 1,000 characters); the end always goes after the last paragraph, so the author bio stays public
+- Restricts every article with configurable shortcodes: the start goes at the `[RESTRICT]` marker or automatically after the 2nd paragraph (earlier if the first paragraph reaches 1,000 characters; both limits are configurable); the end always goes after the last paragraph, so the author bio stays public
 - Reuses and updates author biographies stored in WordPress user metadata
 - Validates HTTP and HTTPS links before draft creation
 - Replaces broken links with `CHECK LINK` or reports them without changing the link
@@ -115,7 +115,7 @@ The first valid metadata value wins. Duplicate values and a membership number th
 
 Every imported article gets a restricted part:
 
-- **Start:** at the `[RESTRICT]` marker. Without a marker, the start is inserted automatically after the 2nd text paragraph, or after the 1st paragraph if it alone reaches 1,000 characters (spaces included). Headings, images and lists are not counted. The preview warns when the automatic position was used.
+- **Start:** at the `[RESTRICT]` marker. Without a marker, the start is inserted automatically after the 2nd text paragraph, or earlier after the paragraph in which the text reaches 1,000 characters (spaces included). Both limits can be changed in the settings. Headings, images and lists are not counted. The preview warns when the automatic position was used.
 - **End:** always directly after the last part of the article and before the author bio box, so the bio is always public. A `[RESTRICT_END]` marker in the document is ignored.
 - If nothing follows the start (for example `[RESTRICT]` at the very end), the preview warns that the restricted part is empty.
 
@@ -125,14 +125,39 @@ See [editorial-cheat-sheet.md](editorial-cheat-sheet.md) for the short authoring
 
 ## Settings
 
-The settings page controls:
+The settings page (Settings → Article Import Wizard) is only available to administrators (`manage_options`).
+
+**Restricted Content**
 
 - Restriction start shortcode, required (default: `[restrict]`)
 - Restriction end shortcode, required (default: `[/restrict]`). If it is left empty, the closing tag is derived from the start shortcode, for example `[restrict level="2"]` gives `[/restrict]`.
+- Paragraphs before restriction, from 1 to 10 (default: 2): without a `[RESTRICT]` marker, the restricted part starts after this many text paragraphs at the latest
+- Characters before restriction, from 100 to 10,000 (default: 1,000): without a `[RESTRICT]` marker, the restricted part starts earlier, after the paragraph in which the text reaches this many characters
+
+**Import Defaults**
+
+- Default status after review: save as draft or publish immediately (default: draft). Only preselects the choice for users with `publish_posts`; everyone else always creates drafts.
+- Default categories, preselected in the wizard (default: none)
 - Default inline image slots, from 0 to 20 (default: 3)
-- Import notification email address
 - Link-check timeout per link, from 1,000 to 20,000 ms (default: 6,000 ms). The whole link check is capped at 20 seconds; links not checked in that time are listed as a preview warning.
 - Broken-link handling: replace with `CHECK LINK` or flag only
+
+**Authors**
+
+- Default publisher: the editor or author used when no author is entered or found (default: the logged-in user)
+- Several matching authors: show an error and ask for a more specific name (default), or use the default publisher. The preview warns whenever the default publisher was used for an entered name.
+- Membership number format: a regular expression the whole entry must match (default: `0\d{4}`). An entry in this format is looked up as a username only.
+- Update author profile: always save a new bio and image (default), only if the profile has none yet, or never. The article itself always uses the uploaded bio and image.
+- Author bio box: add it at the end of imported articles (default: on). When it is off, the restriction still ends after the last paragraph.
+
+**Access**
+
+- Who may use the wizard: the roles allowed to open it. Administrators always have access. With no role selected (default), every role that has `edit_posts` and `upload_files` can use it. The menu entry is hidden from everyone else.
+
+**Notifications**
+
+- Send an email after each completed import (default: on)
+- Notification email address
 
 The inline image slots and broken-link handling can be adjusted for an individual import before generating its preview.
 

@@ -30,7 +30,7 @@ Required or strongly recommended:
 
 Optional:
 - [BIO: Short author bio text] (may span several paragraphs; end it with ])
-- [RESTRICT] (start of the members-only part; without it: after the 2nd paragraph, or after the 1st if it has 1,000+ characters)
+- [RESTRICT] (start of the members-only part; without it: automatically, by default after the 2nd paragraph or earlier once the text reaches 1,000 characters)
 - [HEADER 3 Headline 3]
 - [HEADER 4 Headline 4]
 

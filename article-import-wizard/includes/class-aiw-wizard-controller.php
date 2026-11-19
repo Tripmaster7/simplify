@@ -9,16 +9,6 @@ class AIW_Wizard_Controller
     public const MAX_INLINE_IMAGE_SLOTS = 20;
 
     /**
-     * Without a [RESTRICT] marker the restricted part starts after this many text paragraphs...
-     */
-    private const AUTO_RESTRICTION_PARAGRAPHS = 2;
-
-    /**
-     * ...or earlier, after the paragraph in which the article text reaches this many characters.
-     */
-    private const AUTO_RESTRICTION_CHARACTERS = 1000;
-
-    /**
      * Post meta set on media uploaded during preview; removed once the media is attached to a draft.
      */
     public const PREVIEW_UPLOAD_META = '_aiw_preview_upload';
@@ -99,12 +89,12 @@ class AIW_Wizard_Controller
             : '';
 
         $matches = $this->author_service->find_matches_by_identifier($identifier);
-        if (count($matches) === 0) {
-            $current_user = wp_get_current_user();
-            if ($current_user instanceof WP_User && $current_user->ID > 0) {
+        if (count($matches) === 0 || (count($matches) > 1 && AIW_Settings::use_fallback_for_ambiguous_author())) {
+            $fallback_author = $this->author_service->get_fallback_author();
+            if ($fallback_author instanceof WP_User) {
                 wp_send_json_success([
-                    'name' => $current_user->display_name,
-                    'membership_number' => (string) $current_user->user_login,
+                    'name' => $fallback_author->display_name,
+                    'membership_number' => (string) $fallback_author->user_login,
                     'fallback' => true,
                 ]);
             }
@@ -146,6 +136,8 @@ class AIW_Wizard_Controller
 
         $default_inline_slots = AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
         $default_broken_link_mode = AIW_Settings::get_option_string(AIW_Settings::OPTION_REPLACE_BROKEN_LINKS_MODE, 'replace');
+        $default_post_status = AIW_Settings::get_default_post_status();
+        $default_category_ids = AIW_Settings::get_default_category_ids();
         $help_url = AIW_PLUGIN_URL . 'docs/editorial-cheat-sheet-print.html';
         $available_categories = get_categories([
             'hide_empty' => false,
@@ -169,13 +161,32 @@ class AIW_Wizard_Controller
             : '';
 
         $author_matches = $this->author_service->find_matches_by_identifier($author_identifier);
-        if (count($author_matches) === 0) {
-            $attributed_author = wp_get_current_user();
-            if (!$attributed_author instanceof WP_User || $attributed_author->ID <= 0) {
+        $author_warning = '';
+        if (count($author_matches) > 1 && !AIW_Settings::use_fallback_for_ambiguous_author()) {
+            $this->redirect_with_error(__('Several authors match this name. Please enter a more specific name or the membership number.', 'article-import-wizard'));
+        }
+
+        if (count($author_matches) !== 1) {
+            $attributed_author = $this->author_service->get_fallback_author();
+            if (!$attributed_author instanceof WP_User) {
                 $this->redirect_with_error(__('No author found and no logged-in author is available.', 'article-import-wizard'));
             }
-        } elseif (count($author_matches) > 1) {
-            $this->redirect_with_error(__('Several authors match this name. Please enter a more specific name or the five-digit membership number.', 'article-import-wizard'));
+
+            if (count($author_matches) > 1) {
+                $author_warning = sprintf(
+                    /* translators: 1: entered author name, 2: fallback author */
+                    __('Several authors match "%1$s". The article is attributed to the default author %2$s.', 'article-import-wizard'),
+                    $author_identifier,
+                    (string) $attributed_author->display_name
+                );
+            } elseif ($author_identifier !== '') {
+                $author_warning = sprintf(
+                    /* translators: 1: entered author name, 2: fallback author */
+                    __('No author matches "%1$s". The article is attributed to the default author %2$s.', 'article-import-wizard'),
+                    $author_identifier,
+                    (string) $attributed_author->display_name
+                );
+            }
         } else {
             $attributed_author = $author_matches[0];
         }
@@ -252,6 +263,9 @@ class AIW_Wizard_Controller
 
         $doc_metadata = isset($doc_parse['metadata']) && is_array($doc_parse['metadata']) ? $doc_parse['metadata'] : [];
         $metadata_warnings = [];
+        if ($author_warning !== '') {
+            $metadata_warnings[] = $author_warning;
+        }
 
         if (!empty($doc_metadata['author_membership']) && (string) $doc_metadata['author_membership'] !== $membership_number) {
             $metadata_warnings[] = __('DOCX membership number does not match the wizard membership number.', 'article-import-wizard');
@@ -387,7 +401,8 @@ class AIW_Wizard_Controller
             (string) $attributed_author->display_name,
             $final_author_bio,
             $final_author_image_id,
-            $restriction_end
+            $restriction_end,
+            AIW_Settings::show_bio_box()
         );
 
         $links = $this->extract_links_from_content($working_content);
@@ -715,14 +730,17 @@ class AIW_Wizard_Controller
         }
 
         $submitted_author_bio = isset($preview['submitted_author_bio']) ? (string) $preview['submitted_author_bio'] : '';
-        if ($submitted_author_bio !== '') {
+        if ($submitted_author_bio !== ''
+            && AIW_Settings::may_update_author_profile((string) get_user_meta($attributed_author_user_id, 'aiw_author_bio', true))) {
             update_user_meta($attributed_author_user_id, 'aiw_author_bio', $submitted_author_bio);
         }
 
         $author_image_id = isset($preview['author_image_id']) ? (int) $preview['author_image_id'] : 0;
         if ($author_image_id > 0) {
             $this->attach_preview_upload($author_image_id, (int) $post_id);
-            update_user_meta($attributed_author_user_id, 'aiw_author_image_id', $author_image_id);
+            if (AIW_Settings::may_update_author_profile((int) get_user_meta($attributed_author_user_id, 'aiw_author_image_id', true))) {
+                update_user_meta($attributed_author_user_id, 'aiw_author_image_id', $author_image_id);
+            }
         }
 
         $validation_report = isset($preview['validation_report']) && is_array($preview['validation_report'])
@@ -749,14 +767,16 @@ class AIW_Wizard_Controller
         update_post_meta($post_id, '_aiw_category_ids', $category_ids);
         update_post_meta($post_id, '_aiw_travel_date', isset($preview['travel_date']) ? (string) $preview['travel_date'] : '');
 
-        $notify_email = AIW_Settings::get_option_string(AIW_Settings::OPTION_NOTIFY_EMAIL, get_option('admin_email', ''));
-        $this->notifier->send_import_complete_email($post_id, $notify_email, [
-            'membership_number' => isset($preview['membership_number']) ? (string) $preview['membership_number'] : '',
-            'attributed_author' => isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : '',
-            'invalid_links' => isset($preview['invalid_links_count']) ? (int) $preview['invalid_links_count'] : 0,
-            'operator_user_id' => (int) $operator_user_id,
-            'updated' => $is_update,
-        ]);
+        if (AIW_Settings::notifications_enabled()) {
+            $notify_email = AIW_Settings::get_option_string(AIW_Settings::OPTION_NOTIFY_EMAIL, get_option('admin_email', ''));
+            $this->notifier->send_import_complete_email($post_id, $notify_email, [
+                'membership_number' => isset($preview['membership_number']) ? (string) $preview['membership_number'] : '',
+                'attributed_author' => isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : '',
+                'invalid_links' => isset($preview['invalid_links_count']) ? (int) $preview['invalid_links_count'] : 0,
+                'operator_user_id' => (int) $operator_user_id,
+                'updated' => $is_update,
+            ]);
+        }
 
         $edit_url = get_edit_post_link($post_id, '');
         $message = sprintf(
@@ -774,12 +794,7 @@ class AIW_Wizard_Controller
 
     private function can_access_wizard(): bool
     {
-        return current_user_can('edit_posts') && current_user_can('upload_files');
-    }
-
-    private function is_valid_membership_number(string $membership_number): bool
-    {
-        return preg_match('/^0\d{4}$/', $membership_number) === 1;
+        return AIW_Settings::user_can_use_wizard();
     }
 
     /**
@@ -860,9 +875,19 @@ class AIW_Wizard_Controller
         ];
     }
 
-    private function append_bio_box_from_data(string $content, string $display_name, string $bio, int $image_id, string $restriction_end): string
+    private function append_bio_box_from_data(string $content, string $display_name, string $bio, int $image_id, string $restriction_end, bool $show_bio_box = true): string
     {
         $restriction_end = trim($restriction_end);
+        if (!$show_bio_box) {
+            $parts = [];
+            if ($content !== '') {
+                $parts[] = $content;
+            }
+            $parts[] = $this->wrap_shortcode_block($restriction_end);
+
+            return implode("\n\n", $parts);
+        }
+
         $image_html = '';
         if ($image_id > 0) {
             $candidate = wp_get_attachment_image($image_id, 'medium', false, ['class' => 'aiw-bio-box__image']);
@@ -968,8 +993,8 @@ class AIW_Wizard_Controller
     }
 
     /**
-     * Without a [RESTRICT] marker the restricted part starts after the 2nd text paragraph, or
-     * after the paragraph in which the text reaches AUTO_RESTRICTION_CHARACTERS characters,
+     * Without a [RESTRICT] marker the restricted part starts after the configured number of text paragraphs, or
+     * after the paragraph in which the text reaches the configured character limit,
      * whichever comes first. Headings, images and lists are not counted.
      *
      * @param string[] $blocks
@@ -979,6 +1004,8 @@ class AIW_Wizard_Controller
      */
     private function find_automatic_restriction_position(array $blocks): array
     {
+        $paragraph_limit = AIW_Settings::get_restriction_paragraphs();
+        $character_limit = AIW_Settings::get_restriction_characters();
         $paragraph_count = 0;
         $characters = 0;
         $last_paragraph_index = null;
@@ -997,7 +1024,7 @@ class AIW_Wizard_Controller
             $characters += mb_strlen($text);
             $last_paragraph_index = $index;
 
-            if ($paragraph_count >= self::AUTO_RESTRICTION_PARAGRAPHS || $characters >= self::AUTO_RESTRICTION_CHARACTERS) {
+            if ($paragraph_count >= $paragraph_limit || $characters >= $character_limit) {
                 return [$index, $paragraph_count];
             }
         }

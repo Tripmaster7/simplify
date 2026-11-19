@@ -198,8 +198,8 @@ if (!defined('ABSPATH')) {
                             <p>
                                 <label for="aiw_import_status"><strong><?php esc_html_e('After review', 'article-import-wizard'); ?></strong></label>
                                 <select id="aiw_import_status" name="aiw_import_status">
-                                    <option value="draft"><?php esc_html_e('Save as draft', 'article-import-wizard'); ?></option>
-                                    <option value="publish"><?php esc_html_e('Publish immediately', 'article-import-wizard'); ?></option>
+                                    <option value="draft"<?php selected($default_post_status, 'draft'); ?>><?php esc_html_e('Save as draft', 'article-import-wizard'); ?></option>
+                                    <option value="publish"<?php selected($default_post_status, 'publish'); ?>><?php esc_html_e('Publish immediately', 'article-import-wizard'); ?></option>
                                 </select>
                             </p>
                             <p class="description"><?php esc_html_e('Publishing will make the article publicly visible as soon as you confirm.', 'article-import-wizard'); ?></p>
@@ -248,8 +248,8 @@ if (!defined('ABSPATH')) {
                         <p>
                             <label for="aiw_import_status"><strong><?php esc_html_e('After review', 'article-import-wizard'); ?></strong></label>
                             <select id="aiw_import_status" name="aiw_import_status">
-                                <option value="draft"><?php esc_html_e('Save as draft', 'article-import-wizard'); ?></option>
-                                <option value="publish"><?php esc_html_e('Publish immediately', 'article-import-wizard'); ?></option>
+                                <option value="draft"<?php selected($default_post_status, 'draft'); ?>><?php esc_html_e('Save as draft', 'article-import-wizard'); ?></option>
+                                <option value="publish"<?php selected($default_post_status, 'publish'); ?>><?php esc_html_e('Publish immediately', 'article-import-wizard'); ?></option>
                             </select>
                         </p>
                         <p class="description"><?php esc_html_e('Publishing will make the article publicly visible as soon as you confirm.', 'article-import-wizard'); ?></p>
@@ -271,7 +271,7 @@ if (!defined('ABSPATH')) {
                 <strong><?php esc_html_e('Before you start', 'article-import-wizard'); ?></strong>
                 <ol>
                     <li><?php esc_html_e('Save the article as a DOCX file in Word.', 'article-import-wizard'); ?></li>
-                    <li><?php esc_html_e('Know the author’s five-digit member number.', 'article-import-wizard'); ?></li>
+                    <li><?php esc_html_e('Know the author’s name or member number.', 'article-import-wizard'); ?></li>
                     <li><?php esc_html_e('Prepare the headline picture and any pictures used inside the article.', 'article-import-wizard'); ?></li>
                 </ol>
                 <a href="<?php echo esc_url((string) $help_url); ?>" target="_blank" rel="noopener noreferrer">
@@ -288,7 +288,7 @@ if (!defined('ABSPATH')) {
                         <th scope="row"><label for="aiw_membership_number"><?php esc_html_e('Author or Membership Number', 'article-import-wizard'); ?></label></th>
                         <td>
                             <input id="aiw_membership_number" name="aiw_membership_number" type="text" class="regular-text" aria-describedby="aiw-membership-help aiw-membership-status" />
-                            <p id="aiw-membership-help" class="description"><?php esc_html_e('Enter the author name or five-digit membership number.', 'article-import-wizard'); ?></p>
+                            <p id="aiw-membership-help" class="description"><?php esc_html_e('Enter the author name or membership number.', 'article-import-wizard'); ?></p>
                             <p id="aiw-membership-status" class="aiw-membership-status" aria-live="polite"></p>
                         </td>
                     </tr>
@@ -299,7 +299,7 @@ if (!defined('ABSPATH')) {
                                 <?php if (isset($available_categories) && is_array($available_categories)) : ?>
                                     <?php foreach ($available_categories as $category) : ?>
                                         <?php if (isset($category->term_id, $category->name)) : ?>
-                                            <option value="<?php echo esc_attr((string) $category->term_id); ?>"><?php echo esc_html((string) $category->name); ?></option>
+                                            <option value="<?php echo esc_attr((string) $category->term_id); ?>"<?php selected(in_array((int) $category->term_id, $default_category_ids, true)); ?>><?php echo esc_html((string) $category->name); ?></option>
                                         <?php endif; ?>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
