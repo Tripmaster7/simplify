@@ -1,6 +1,22 @@
 (function () {
     'use strict';
 
+    // Enter never sends a wizard form; only clicking a button does. Browsers otherwise submit on
+    // Enter in any single-line field (title, author, files, checkboxes...), which sends a half-filled
+    // form and loses the selected files. Enter still adds a line break in text areas and still
+    // activates a focused button. This script is only loaded on the wizard page.
+    var buttonTypes = ['submit', 'button', 'reset', 'image'];
+    document.addEventListener('keydown', function (event) {
+        var target = event.target;
+        if (event.key !== 'Enter' || event.isComposing || !target || target.tagName !== 'INPUT' || !target.form) {
+            return;
+        }
+
+        if (buttonTypes.indexOf((target.type || '').toLowerCase()) === -1) {
+            event.preventDefault();
+        }
+    }, true);
+
     var membershipInput = document.getElementById('aiw_membership_number');
     var membershipStatus = document.getElementById('aiw-membership-status');
     var requestSequence = 0;
