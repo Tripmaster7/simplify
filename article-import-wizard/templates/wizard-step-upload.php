@@ -233,14 +233,6 @@ if (!defined('ABSPATH')) {
                                 }
                             });
                             <?php endif; ?>
-                            form.addEventListener('submit', function (event) {
-                                if (checkbox.checked) {
-                                    var statusSelect = document.getElementById('aiw_import_status');
-                                    if (statusSelect && statusSelect.value === 'publish' && !window.confirm('<?php echo esc_js(__('The new article will be published publicly immediately. Continue?', 'article-import-wizard')); ?>')) {
-                                        event.preventDefault();
-                                    }
-                                }
-                            });
                         })();
                     </script>
                 <?php else : ?>
@@ -260,6 +252,24 @@ if (!defined('ABSPATH')) {
                     <?php submit_button(__('Complete Import', 'article-import-wizard'), 'primary', 'submit', false); ?>
                 <?php endif; ?>
                 <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=aiw-import-wizard')); ?>"><?php esc_html_e('Start New Import', 'article-import-wizard'); ?></a>
+                <script>
+                    (function () {
+                        var form = document.currentScript.closest('form');
+                        var statusSelect = form.querySelector('select[name="aiw_import_status"]');
+                        if (!statusSelect) {
+                            return;
+                        }
+                        form.addEventListener('submit', function (event) {
+                            var createNew = form.querySelector('[name="aiw_create_new"]');
+                            if (createNew && !createNew.checked) {
+                                return;
+                            }
+                            if (statusSelect.value === 'publish' && !window.confirm('<?php echo esc_js(__('The new article will be published publicly immediately. Continue?', 'article-import-wizard')); ?>')) {
+                                event.preventDefault();
+                            }
+                        });
+                    })();
+                </script>
             </form>
         </div>
     <?php else : ?>

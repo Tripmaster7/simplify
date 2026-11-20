@@ -7,7 +7,8 @@ if (!defined('ABSPATH')) {
 /**
  * Reduces the WordPress admin to what non-technical editors need: Posts, Media and the import
  * wizard. Administrators (manage_options) always keep the full admin. Controlled by the
- * "Simplified admin menu" setting.
+ * "Simplified admin menu" setting. Login redirects for authors and editors are independent of
+ * this setting.
  *
  * This only tidies up the interface. What users may do is still decided by their WordPress role.
  */
@@ -25,7 +26,9 @@ class AIW_Simple_Admin
         add_action('admin_menu', [$this, 'trim_menu'], PHP_INT_MAX);
         add_action('admin_bar_menu', [$this, 'trim_admin_bar'], PHP_INT_MAX);
         add_action('load-index.php', [$this, 'redirect_dashboard']);
+        add_action('template_redirect', [$this, 'redirect_login_page']);
         add_filter('login_redirect', [$this, 'login_redirect'], 10, 3);
+        add_filter('rcp_login_redirect_url', [$this, 'rcp_login_redirect'], 10, 2);
     }
 
     public static function applies_to(?WP_User $user = null): bool
@@ -89,7 +92,7 @@ class AIW_Simple_Admin
      */
     public function login_redirect($redirect_to, $requested, $user)
     {
-        if (!$user instanceof WP_User || !self::applies_to($user)) {
+        if (!self::should_redirect_login($user)) {
             return $redirect_to;
         }
 
@@ -100,6 +103,44 @@ class AIW_Simple_Admin
         }
 
         return self::start_url($user);
+    }
+
+    public function rcp_login_redirect($redirect_to, $user)
+    {
+        // RCP bypasses WordPress's login_redirect and defaults to returning to the login form.
+        return $this->login_redirect($redirect_to, '', $user);
+    }
+
+    public function redirect_login_page(): void
+    {
+        if (
+            !is_page()
+            || !is_user_logged_in()
+            || isset($_GET['rcp_action'])
+            || isset($_GET['action'])
+            || !self::should_redirect_login(wp_get_current_user())
+        ) {
+            return;
+        }
+
+        $page = get_queried_object();
+        if (!$page instanceof WP_Post || !has_shortcode($page->post_content, 'login_form')) {
+            return;
+        }
+
+        // Frontend login handlers can reload the form instead of using either redirect filter.
+        nocache_headers();
+        wp_safe_redirect(self::start_url(wp_get_current_user()));
+        exit;
+    }
+
+    private static function should_redirect_login($user): bool
+    {
+        return $user instanceof WP_User
+            && !user_can($user, 'manage_options')
+            && !in_array('administrator', (array) $user->roles, true)
+            && array_intersect(['author', 'editor'], (array) $user->roles) !== []
+            && AIW_Settings::user_can_use_wizard($user);
     }
 
     private static function start_url(WP_User $user): string

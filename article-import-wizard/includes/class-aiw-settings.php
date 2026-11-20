@@ -54,15 +54,25 @@ class AIW_Settings
 
     /**
      * The closing shortcode for a start shortcode: "[restrict level=2]" -> "[/restrict]".
-     * Returns '' when no shortcode tag can be read from the start shortcode.
+     * Returns '' when the input is not a single, well-formed opening shortcode.
      */
     public static function closing_shortcode_for(string $start_shortcode): string
     {
-        if (preg_match('/^\[\s*([A-Za-z0-9_-]+)/', trim($start_shortcode), $matches) !== 1) {
+        $start_shortcode = trim($start_shortcode);
+        if (
+            preg_match('/^\[([A-Za-z0-9_-]+)(?:\s+(?:"[^"\[\]]*"|\'[^\'\[\]]*\'|[^\[\]\'"])*?)?\]$/D', $start_shortcode, $matches) !== 1
+            || preg_match('/\/\s*\]$/', $start_shortcode) === 1
+        ) {
             return '';
         }
 
         return '[/' . $matches[1] . ']';
+    }
+
+    public static function restriction_shortcodes_are_valid(string $start_shortcode, string $end_shortcode): bool
+    {
+        $expected_end = self::closing_shortcode_for($start_shortcode);
+        return $expected_end !== '' && trim($end_shortcode) === $expected_end;
     }
 
     public function register(): void
@@ -234,7 +244,7 @@ class AIW_Settings
         $this->add_field(self::OPTION_SIMPLE_ADMIN, __('Simplified Admin Menu', 'article-import-wizard'), 'render_checkbox_field', 'aiw_access_section', [
             'default' => true,
             'label' => __('Show only Posts, Media and Article Import to everyone except administrators', 'article-import-wizard'),
-            'description' => __('Also hides the dashboard and most of the top toolbar, and opens the import wizard after login. Administrators always see the full menu. This only tidies up the screen; what users may do is still decided by their role.', 'article-import-wizard'),
+            'description' => __('Also hides the dashboard and most of the top toolbar. Administrators always see the full menu. This only tidies up the screen; what users may do is still decided by their role.', 'article-import-wizard'),
         ]);
 
         // Notifications.
@@ -456,34 +466,42 @@ class AIW_Settings
         add_settings_error(
             self::OPTION_RESTRICTION_START,
             'aiw_restriction_start_invalid',
-            __('The restriction start shortcode is required and must be a shortcode such as [restrict]. The default was restored.', 'article-import-wizard')
+            __('Enter a valid opening shortcode such as [restrict level="2"]. The previous value was kept.', 'article-import-wizard')
         );
 
-        return self::DEFAULT_RESTRICTION_START;
+        return self::get_option_string(self::OPTION_RESTRICTION_START, self::DEFAULT_RESTRICTION_START);
     }
 
     public function sanitize_restriction_end($value): string
     {
         $value = trim(sanitize_text_field((string) $value));
-        if ($value !== '') {
+        $start = self::get_option_string(self::OPTION_RESTRICTION_START, self::DEFAULT_RESTRICTION_START);
+        if (self::restriction_shortcodes_are_valid($start, $value)) {
             return $value;
         }
 
-        $start = self::get_option_string(self::OPTION_RESTRICTION_START, self::DEFAULT_RESTRICTION_START);
         $derived = self::closing_shortcode_for($start);
+        if ($derived === '') {
+            add_settings_error(
+                self::OPTION_RESTRICTION_END,
+                'aiw_restriction_end_invalid',
+                __('Correct the opening restriction shortcode before setting its closing shortcode. The previous value was kept.', 'article-import-wizard')
+            );
+            return self::get_option_string(self::OPTION_RESTRICTION_END, self::DEFAULT_RESTRICTION_END);
+        }
 
         add_settings_error(
             self::OPTION_RESTRICTION_END,
             'aiw_restriction_end_derived',
             sprintf(
                 /* translators: %s: closing shortcode, e.g. [/restrict] */
-                __('The restriction end shortcode is required. It was set to %s to match the start shortcode.', 'article-import-wizard'),
-                $derived !== '' ? $derived : self::DEFAULT_RESTRICTION_END
+                __('The restriction end shortcode was missing or did not match. It was set to %s to match the start shortcode.', 'article-import-wizard'),
+                $derived
             ),
             'warning'
         );
 
-        return $derived !== '' ? $derived : self::DEFAULT_RESTRICTION_END;
+        return $derived;
     }
 
     public function sanitize_restriction_characters($value): int

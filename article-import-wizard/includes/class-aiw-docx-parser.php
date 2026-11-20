@@ -95,6 +95,7 @@ class AIW_DOCX_Parser
         $metadata = [];
         $html_parts = [];
         $first_body_text = '';
+        $fallback_title_part = null;
         $list_items = [];
 
         $paragraphs = $this->merge_multi_paragraph_bio($paragraphs, $metadata);
@@ -180,6 +181,7 @@ class AIW_DOCX_Parser
 
             if ($first_body_text === '') {
                 $first_body_text = $this->strip_markup_markers($text);
+                $fallback_title_part = count($html_parts);
             }
 
             $html_parts[] = '<p>' . $this->render_inline($text) . '</p>';
@@ -195,6 +197,9 @@ class AIW_DOCX_Parser
 
         if ($title === '' && $first_body_text !== '') {
             $title = $first_body_text;
+            if ($fallback_title_part !== null) {
+                unset($html_parts[$fallback_title_part]);
+            }
         }
 
         $writing_date = $this->extract_core_created_date($core_xml);

@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.3.4
+**Current version:** 1.3.8
 
 **Author:** GitHub Copilot and Jens
 
@@ -42,6 +42,8 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 
 ## Installation
 
+Download `article-import-wizard-v1.3.8.zip` from the [latest GitHub release](https://github.com/Tripmaster7/simplify/releases/latest) and upload it under **Plugins > Add New > Upload Plugin** (replace the existing plugin when prompted), or install manually:
+
 1. Copy the `article-import-wizard` directory to `wp-content/plugins/`.
 2. Activate **Article Import Wizard** in WordPress.
 3. Open **Settings > Article Import Wizard** and review the defaults.
@@ -59,6 +61,12 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 8. Open the resulting article or start another import.
 
 Preview data is temporary. If it expires, generate a new preview before creating the draft. Images uploaded for a preview that never becomes a draft are deleted automatically by a daily cleanup task after 24 hours.
+
+Immediate publication requires a confirmation dialog, including when it is the administrator's configured default. Cancelling leaves the preview open without saving.
+
+If a DOCX has no explicit title marker or title style, its first text paragraph becomes the title and is not repeated in the body. Prefer a `[TITLE: ...]` marker or Word title style when the opening paragraph is intended as article text.
+
+Inline pictures require matching `[Bild N]` or `[Image N]` markers. The preview warns about uploaded or reused inline picture slots without a matching marker; it does not insert those pictures automatically.
 
 ## Updating an Article
 
@@ -134,6 +142,8 @@ The settings page (Settings → Article Import Wizard) is only available to admi
 - Paragraphs before restriction, from 1 to 10 (default: 2): without a `[RESTRICT]` marker, the restricted part starts after this many text paragraphs at the latest
 - Characters before restriction, from 100 to 10,000 (default: 1,000): without a `[RESTRICT]` marker, the restricted part starts earlier, after the paragraph in which the text reaches this many characters
 
+Shortcodes must form a single opening/closing pair, for example `[restrict subscription="1" message="Members only"]` and `[/restrict]`. Nested brackets, incomplete quotes, self-closing opening tags, and mismatched closing tags are rejected during preview generation and import confirmation. Invalid opening settings retain the previous value and display an error; missing or mismatched closing settings are derived from a valid opening tag with a warning. A site administrator must correct existing malformed settings before importing again.
+
 **Import Defaults**
 
 - Default status after review: save as draft or publish immediately (default: draft). Only preselects the choice for users with `publish_posts`; everyone else always creates drafts.
@@ -153,7 +163,13 @@ The settings page (Settings → Article Import Wizard) is only available to admi
 **Access**
 
 - Who may use the wizard: the roles allowed to open it. Administrators always have access. With no role selected (default), every role that has `edit_posts` and `upload_files` can use it. The menu entry is hidden from everyone else.
-- Simplified admin menu (default: on): everyone except administrators sees only **Posts**, **Media** and **Article Import** in the admin menu, also hiding menus added by other plugins. The dashboard is hidden and redirects to the wizard (or to the post list for users who may not use it), login opens the wizard, and the top toolbar keeps only the site link and the account menu (profile, log out). This only tidies up the screen; what users may do is still decided by their WordPress role.
+- Simplified admin menu (default: on): everyone except administrators sees only **Posts**, **Media** and **Article Import** in the admin menu, also hiding menus added by other plugins. The dashboard is hidden and redirects to the wizard (or to the post list for users who may not use it), and the top toolbar keeps only the site link and the account menu (profile, log out). This only tidies up the screen; what users may do is still decided by their WordPress role.
+
+After a normal WordPress login, Authors and Editors with wizard access land on **Article Import**, regardless of the simplified-menu setting. Administrators (including users with `manage_options`), other roles, and failed logins keep the normal redirect. Explicit destination links through the standard WordPress login, such as an article editing link, are preserved.
+
+The Restrict Content Pro `[login_form]` frontend login is also supported through its `rcp_login_redirect_url` filter. Eligible Authors and Editors go directly to **Article Import** instead of the form's return URL, including when that URL points back to the login page. Administrators, other roles, and users without wizard access keep the membership plugin's destination.
+
+If a frontend login handler reloads a page containing `[login_form]` instead of using a redirect filter, eligible logged-in Authors and Editors are sent to **Article Import**. Other pages and login recovery requests with `rcp_action` or `action` query parameters are left unchanged.
 
 **Notifications**
 
@@ -189,6 +205,18 @@ The plugin also records the source filename, import time, selected categories, r
 - Publishing is enforced server-side and requires the WordPress `publish_posts` capability.
 - Link checks use WordPress's safe HTTP API, so URLs pointing at private or loopback addresses are not requested.
 - The operator identity is never inserted into public article content.
+
+## Regression Checks
+
+
+With PHP 8.3+ (including DOM, SimpleXML and ZipArchive) and Node.js available:
+
+```powershell
+php tests\regression.php
+node tests\publish-confirmation.cjs
+```
+
+The JavaScript check renders the real PHP preview template and exercises its confirmation handlers. An optional first argument selects a PHP executable outside `PATH`.
 
 ## Repository Layout
 

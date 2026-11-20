@@ -6,17 +6,19 @@ if (!defined('ABSPATH')) {
 
 class AIW_Image_Mapper
 {
-    public function replace_placeholders(string $content, array $image_map, array &$missing_slots = []): string
+    public function replace_placeholders(string $content, array $image_map, array &$missing_slots = [], array &$unused_slots = []): string
     {
+        $unused_slots = array_keys($image_map);
         if ($content === '') {
             return $content;
         }
 
         $pattern = '/\[(Bild|Image)\s*(\d+)\s*(?::([^\]]*))?\]/i';
 
-        return (string) preg_replace_callback(
+        $used_slots = [];
+        $content = (string) preg_replace_callback(
             $pattern,
-            static function (array $matches) use ($image_map, &$missing_slots): string {
+            static function (array $matches) use ($image_map, &$missing_slots, &$used_slots): string {
                 $index = isset($matches[2]) ? (int) $matches[2] : 0;
                 if ($index <= 0 || !isset($image_map[$index])) {
                     if ($index > 0) {
@@ -26,6 +28,7 @@ class AIW_Image_Mapper
                 }
 
                 $image_data = $image_map[$index];
+                $used_slots[$index] = true;
                 $url = isset($image_data['url']) ? esc_url($image_data['url']) : '';
                 $alt = isset($image_data['alt']) ? esc_attr($image_data['alt']) : '';
                 $id = isset($image_data['id']) ? (int) $image_data['id'] : 0;
@@ -42,5 +45,8 @@ class AIW_Image_Mapper
             },
             $content
         );
+
+        $unused_slots = array_keys(array_diff_key($image_map, $used_slots));
+        return $content;
     }
 }

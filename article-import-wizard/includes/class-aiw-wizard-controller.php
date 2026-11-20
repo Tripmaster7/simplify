@@ -225,6 +225,10 @@ class AIW_Wizard_Controller
             $this->redirect_with_error(__('The restriction start and end shortcodes are required. Please set them under Settings > Article Import Wizard.', 'article-import-wizard'));
         }
 
+        if (!AIW_Settings::restriction_shortcodes_are_valid($restriction_start, $restriction_end)) {
+            $this->redirect_with_error(__('The restriction shortcodes are malformed or do not match. Correct them under Settings > Article Import Wizard and generate a new preview.', 'article-import-wizard'));
+        }
+
         $inline_image_count = isset($_POST['aiw_inline_image_count'])
             ? (int) wp_unslash($_POST['aiw_inline_image_count'])
             : AIW_Settings::get_option_int(AIW_Settings::OPTION_INLINE_IMAGE_SLOTS, 3);
@@ -380,7 +384,15 @@ class AIW_Wizard_Controller
 
         $image_map = $this->build_inline_image_map($inline_image_slots);
         $missing_image_slots = [];
-        $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots);
+        $unused_image_slots = [];
+        $content_with_images = $this->image_mapper->replace_placeholders($post_content, $image_map, $missing_image_slots, $unused_image_slots);
+        if (!empty($unused_image_slots)) {
+            $metadata_warnings[] = sprintf(
+                /* translators: %s: comma-separated image slot numbers */
+                __('Inline picture slots %s are not used in the article. Add matching [Bild N] markers to the DOCX and generate a new preview.', 'article-import-wizard'),
+                implode(', ', $unused_image_slots)
+            );
+        }
 
         $working_content = $this->build_restricted_article_body($content_with_images, $restriction_start, $metadata_warnings);
 
@@ -615,6 +627,13 @@ class AIW_Wizard_Controller
         $preview = $this->get_preview_data($preview_token);
         if (!is_array($preview)) {
             $this->redirect_with_error(__('Preview data expired. Please run preview again.', 'article-import-wizard'));
+        }
+
+        if (!AIW_Settings::restriction_shortcodes_are_valid(
+            (string) ($preview['restriction_start'] ?? ''),
+            (string) ($preview['restriction_end'] ?? '')
+        )) {
+            $this->redirect_with_error(__('The restriction shortcodes are malformed or do not match. Correct them under Settings > Article Import Wizard and generate a new preview.', 'article-import-wizard'));
         }
 
         // Claim the preview before doing any work so a double-submitted form cannot create two drafts.
