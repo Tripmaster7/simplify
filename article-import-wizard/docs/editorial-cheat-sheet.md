@@ -13,6 +13,7 @@ Diese Seite ausdrucken und am Arbeitsplatz bereithalten.
 8. Warnungen zu Autor, Links und Bildern prüfen.
 9. Bei **Nach der Prüfung** die Auswahl prüfen: als Entwurf speichern oder direkt veröffentlichen.
 10. Auf **Import abschließen** klicken.
+11. Optional fürs Heft: **Für InDesign herunterladen** klicken (in der Vorschau, nach dem Import oder in der Beitragsliste unter dem Titel) und die ZIP-Datei an das Layout geben. Der erste Absatz des Artikels wird im Heft zum Vorspann.
 
 Im Menü sehen Sie nur **Beiträge**, **Medien** und **Artikel-Import**. Profil und Abmelden finden Sie oben rechts unter Ihrem Namen.
 
@@ -35,6 +36,8 @@ Pflicht oder dringend empfohlen:
 
 Optional:
 - [BIO: Kurzer Autorentext] (darf mehrere Absätze lang sein; mit ] abschließen)
+- [REISEZEIT: Mai bis August 2024] (nur fürs Heft, Zeile „Reisezeit“)
+- [AUTHOR_NAME: Vorname Nachname] (nur fürs Heft: Autorenname für das InDesign-Skript; die Website nimmt die Mitgliedsnummer)
 - [RESTRICT] (Beginn des Mitgliederbereichs; ohne Marker: automatisch, standardmäßig nach dem 2. Absatz oder früher bei langen Absätzen ab 1.000 Zeichen)
 - [HEADER Zwischenüberschrift]
 - [HEADER 3 Zwischenüberschrift]
@@ -75,7 +78,7 @@ Diesen Block in ein neues Word-Dokument kopieren und ausfüllen.
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
 
-Erster Absatz...
+Erster Absatz (im Heft: Vorspann)...
 
 Zweiter Absatz mit Bildmarker [Bild 1: Bildunterschrift].
 

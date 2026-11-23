@@ -24,6 +24,12 @@ if (!defined('ABSPATH')) {
                     <a class="button button-primary" href="<?php echo esc_url($decoded_edit_url); ?>">
                         <?php esc_html_e('Open Article', 'article-import-wizard'); ?>
                     </a>
+                    <?php $imported_post_id = isset($_GET['aiw_post_id']) ? (int) $_GET['aiw_post_id'] : 0; ?>
+                    <?php if ($imported_post_id > 0 && AIW_Settings::indesign_enabled() && current_user_can('edit_post', $imported_post_id) && AIW_InDesign_Export::post_has_print_data($imported_post_id)) : ?>
+                        <a class="button" href="<?php echo esc_url(AIW_InDesign_Export::post_download_url($imported_post_id)); ?>">
+                            <?php esc_html_e('Download for InDesign', 'article-import-wizard'); ?>
+                        </a>
+                    <?php endif; ?>
                     <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=aiw-import-wizard')); ?>">
                         <?php esc_html_e('Import Another Article', 'article-import-wizard'); ?>
                     </a>
@@ -250,6 +256,9 @@ if (!defined('ABSPATH')) {
                         <p><?php esc_html_e('This article will be saved as a draft. An editor with publishing permission can publish it later.', 'article-import-wizard'); ?></p>
                     <?php endif; ?>
                     <?php submit_button(__('Complete Import', 'article-import-wizard'), 'primary', 'submit', false); ?>
+                <?php endif; ?>
+                <?php if (AIW_Settings::indesign_enabled() && isset($preview_data['print_article'])) : ?>
+                    <a class="button" href="<?php echo esc_url(AIW_InDesign_Export::preview_download_url($preview_token)); ?>"><?php esc_html_e('Download for InDesign', 'article-import-wizard'); ?></a>
                 <?php endif; ?>
                 <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=aiw-import-wizard')); ?>"><?php esc_html_e('Start New Import', 'article-import-wizard'); ?></a>
                 <script>

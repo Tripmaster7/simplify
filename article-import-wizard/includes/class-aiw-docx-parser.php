@@ -1026,6 +1026,7 @@ class AIW_DOCX_Parser
             'author_membership' => '/\[(AUTHOR_MEMBERSHIP|MEMBERSHIP|MEMBER_ID)\s*:\s*([^\]]+)\]/i',
             'writing_date' => '/\[(WRITING_DATE|DATE)\s*:\s*([^\]]+)\]/i',
             'bio' => '/\[(BIO)\s*:\s*([^\]]+)\]/i',
+            'travel_period' => '/\[(REISEZEIT|TRAVEL_PERIOD)\s*:\s*([^\]]+)\]/i',
         ];
 
         $text = (string) preg_replace('/\[AUTHOR_NAME\s*:\s*[^\]]*\]/i', '', $text);

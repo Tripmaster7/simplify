@@ -30,7 +30,19 @@ $aiw_options = [
     'aiw_wizard_roles',
     'aiw_simple_admin_menu',
     'aiw_notify_enabled',
+    'aiw_indesign_enabled',
+    'aiw_indesign_styles',
 ];
+
+// The uploaded InDesign template is plugin configuration, too.
+$aiw_template = get_option('aiw_indesign_template', []);
+if (is_array($aiw_template) && !empty($aiw_template['file'])) {
+    $aiw_template_path = trailingslashit(wp_upload_dir()['basedir']) . 'aiw-indesign/' . basename((string) $aiw_template['file']);
+    if (is_file($aiw_template_path)) {
+        wp_delete_file($aiw_template_path);
+    }
+}
+$aiw_options[] = 'aiw_indesign_template';
 
 foreach ($aiw_options as $aiw_option) {
     delete_option($aiw_option);

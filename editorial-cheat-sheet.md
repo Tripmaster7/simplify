@@ -13,6 +13,7 @@ Print this page and keep it next to your workstation.
 8. Check warnings (author, links, images).
 9. Under **After review**, check the choice: save as draft or publish immediately.
 10. Click **Complete Import**.
+11. Optional, for print: click **Download for InDesign** (in the preview, after the import, or in the post list under the title) and pass the ZIP file to layout. In print, the first paragraph of the article becomes the Vorspann (intro).
 
 The menu only shows **Posts**, **Media** and **Article Import**. Your profile and log out are at the top right under your name.
 
@@ -35,6 +36,8 @@ Required or strongly recommended:
 
 Optional:
 - [BIO: Short author bio text] (may span several paragraphs; end it with ])
+- [REISEZEIT: Mai bis August 2024] (print only, "Reisezeit" line)
+- [AUTHOR_NAME: First Last] (print only: author name for the InDesign script; the website uses the membership number)
 - [RESTRICT] (start of the members-only part; without it: automatically, by default after the 2nd paragraph or earlier once the text reaches 1,000 characters)
 - [HEADER Section headline]
 - [HEADER 3 Section headline]
@@ -75,7 +78,7 @@ Copy this block into a new Word document and fill it in.
 [WRITING_DATE: ]
 [AUTHOR_MEMBERSHIP: ]
 
-First paragraph...
+First paragraph (in print: Vorspann)...
 
 Second paragraph with image marker [Bild 1: Caption].
 

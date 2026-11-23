@@ -29,6 +29,48 @@ class AIW_Settings
     public const OPTION_NOTIFY_ENABLED = 'aiw_notify_enabled';
     public const OPTION_NOTIFY_EMAIL = 'aiw_notify_email';
     public const OPTION_BACK_LINK_PARENT_IDS = 'aiw_back_link_parent_ids';
+    public const OPTION_INDESIGN_ENABLED = 'aiw_indesign_enabled';
+    public const OPTION_INDESIGN_STYLES = 'aiw_indesign_styles';
+    public const OPTION_INDESIGN_TEMPLATE = 'aiw_indesign_template';
+
+    /** Folder below the uploads directory that holds the InDesign template. */
+    public const INDESIGN_TEMPLATE_DIR = 'aiw-indesign';
+
+    /** Placeholders a complete article template has; [TEXT] is required. */
+    public const INDESIGN_EXPECTED_PLACEHOLDERS = ['TITEL', 'UNTERTITEL', 'AUTOR', 'VORSPANN', 'TEXT', 'BIO'];
+
+    /**
+     * Default InDesign style names, keyed by the role they have in the article. The defaults are the
+     * names of the demo article template. Only INDESIGN_REQUIRED_STYLES fall back to their default
+     * when left empty; every other empty role uses a related style (see AIW_ICML_Writer).
+     */
+    public const DEFAULT_INDESIGN_STYLES = [
+        'title' => 'Artikeltitel',
+        'subtitle' => 'Untertitel',
+        'author' => 'Untertitel',
+        'vorspann' => 'Vorspann',
+        'body_first' => '',
+        'body' => 'Fliesstext',
+        'heading2' => 'Zwischenueberschrift',
+        'heading3' => '',
+        'heading4' => '',
+        'list_bullet' => '',
+        'list_bullet_2' => '',
+        'list_number' => '',
+        'list_number_2' => '',
+        'image' => '',
+        'caption' => 'Bildunterschrift',
+        'bio_name' => 'Zwischenueberschrift',
+        'bio' => 'Vorspann',
+        'bold' => '',
+        'italic' => '',
+        'bold_italic' => '',
+        'link' => '',
+    ];
+
+    /** Roles that must have a style; every other empty role falls back to a related style. */
+    public const INDESIGN_REQUIRED_STYLES = ['title', 'body'];
+    public const INDESIGN_CHARACTER_STYLES = ['bold', 'italic', 'bold_italic', 'link'];
 
     public const DEFAULT_RESTRICTION_START = '[restrict]';
     public const DEFAULT_RESTRICTION_END = '[/restrict]';
@@ -100,7 +142,7 @@ class AIW_Settings
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('Article Import Wizard Settings', 'article-import-wizard'); ?></h1>
-            <form action="options.php" method="post">
+            <form action="options.php" method="post" enctype="multipart/form-data">
                 <?php
                 settings_fields('aiw_settings_group');
                 do_settings_sections('aiw-settings');
@@ -135,6 +177,9 @@ class AIW_Settings
         $this->register_option(self::OPTION_NOTIFY_ENABLED, 'boolean', 'rest_sanitize_boolean', true);
         $this->register_option(self::OPTION_NOTIFY_EMAIL, 'string', 'sanitize_email', get_option('admin_email', ''));
         $this->register_option(self::OPTION_BACK_LINK_PARENT_IDS, 'array', [$this, 'sanitize_back_link_parent_ids'], []);
+        $this->register_option(self::OPTION_INDESIGN_ENABLED, 'boolean', 'rest_sanitize_boolean', true);
+        $this->register_option(self::OPTION_INDESIGN_STYLES, 'array', [$this, 'sanitize_indesign_styles'], self::DEFAULT_INDESIGN_STYLES);
+        $this->register_option(self::OPTION_INDESIGN_TEMPLATE, 'array', [$this, 'sanitize_indesign_template'], []);
 
         // Restricted content.
         $this->add_section('aiw_restriction_section', __('Restricted Content', 'article-import-wizard'));
@@ -265,6 +310,29 @@ class AIW_Settings
             [$this, 'render_back_link_parents_field'],
             'aiw-settings',
             'aiw_navigation_section'
+        );
+
+        // InDesign export.
+        $this->add_section('aiw_indesign_section', __('InDesign Export', 'article-import-wizard'));
+
+        $this->add_field(self::OPTION_INDESIGN_ENABLED, __('InDesign Download', 'article-import-wizard'), 'render_checkbox_field', 'aiw_indesign_section', [
+            'default' => true,
+            'label' => __('Offer a download for InDesign in the wizard and in the post list', 'article-import-wizard'),
+            'description' => __('With an article template (below), the download is a ZIP file with the filled InDesign document (.idml) and its pictures in the Links folder. Without a template, it contains the article as an InCopy file (.icml) to place into a text frame with File > Place.', 'article-import-wizard'),
+        ]);
+        add_settings_field(
+            self::OPTION_INDESIGN_TEMPLATE,
+            __('Article Template (IDML)', 'article-import-wizard'),
+            [$this, 'render_indesign_template_field'],
+            'aiw-settings',
+            'aiw_indesign_section'
+        );
+        add_settings_field(
+            self::OPTION_INDESIGN_STYLES,
+            __('Style Names in the Template', 'article-import-wizard'),
+            [$this, 'render_indesign_styles_field'],
+            'aiw-settings',
+            'aiw_indesign_section'
         );
     }
 
@@ -452,6 +520,90 @@ class AIW_Settings
         return array_values(array_unique(array_filter(array_map('intval', $parents))));
     }
 
+    public function render_indesign_styles_field(): void
+    {
+        $styles = self::get_indesign_styles();
+        $labels = self::indesign_style_labels();
+
+        echo '<p class="description">' . esc_html__('Enter the names exactly as they appear in the InDesign template. For a style inside a style group, write Group:Style. Fields marked "optional" may stay empty.', 'article-import-wizard') . '</p>';
+        echo '<table class="widefat striped" style="max-width:40em;margin-top:.5em;"><tbody>';
+        foreach ($labels as $key => $label) {
+            $id = self::OPTION_INDESIGN_STYLES . '_' . $key;
+            $kind = in_array($key, self::INDESIGN_CHARACTER_STYLES, true)
+                ? __('Character style', 'article-import-wizard')
+                : __('Paragraph style', 'article-import-wizard');
+            $optional = !in_array($key, self::INDESIGN_REQUIRED_STYLES, true) ? ' (' . __('optional', 'article-import-wizard') . ')' : '';
+
+            echo '<tr><td><label for="' . esc_attr($id) . '">' . esc_html($label . $optional) . '</label><br /><span class="description">' . esc_html($kind) . '</span></td>';
+            echo '<td><input type="text" class="regular-text" id="' . esc_attr($id) . '" name="' . esc_attr(self::OPTION_INDESIGN_STYLES) . '[' . esc_attr($key) . ']" value="' . esc_attr($styles[$key] ?? '') . '" placeholder="' . esc_attr(self::DEFAULT_INDESIGN_STYLES[$key]) . '" /></td></tr>';
+        }
+        echo '</tbody></table>';
+        echo '<p class="description">' . esc_html__('An empty field uses a related style: headings level 3 and 4 use the heading style, lists and the first paragraph use the body text. Without character styles, bold and italic are applied directly to the text. With a template (above), title, subtitle, author line, Vorspann, captions and author box take their style from the placeholder in the template instead.', 'article-import-wizard') . '</p>';
+    }
+
+    public function render_indesign_template_field(): void
+    {
+        $template = self::get_indesign_template();
+
+        if (self::get_indesign_template_path() !== '') {
+            $placeholders = isset($template['placeholders']) && is_array($template['placeholders']) ? $template['placeholders'] : [];
+            $found = [];
+            foreach ($placeholders as $placeholder => $count) {
+                $found[] = '[' . $placeholder . ']' . ((int) $count > 1 ? ' ×' . (int) $count : '');
+            }
+            $missing = array_diff(self::INDESIGN_EXPECTED_PLACEHOLDERS, array_keys($placeholders));
+
+            echo '<p><strong>' . esc_html((string) ($template['name'] ?? '')) . '</strong>';
+            if (!empty($template['uploaded'])) {
+                echo ' <span class="description">(' . esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime((string) $template['uploaded']))) . ')</span>';
+            }
+            echo '</p>';
+            echo '<p>' . esc_html__('Placeholders found:', 'article-import-wizard') . ' ' . esc_html(implode(', ', $found)) . '</p>';
+            if (!empty($missing)) {
+                echo '<p class="description">' . esc_html__('Not in the template (these parts of the article are left out):', 'article-import-wizard') . ' '
+                    . esc_html(implode(', ', array_map(static function (string $placeholder): string {
+                        return '[' . $placeholder . ']';
+                    }, $missing))) . '</p>';
+            }
+            echo '<p><label><input type="checkbox" name="aiw_indesign_template_remove" value="1" /> ' . esc_html__('Remove the template (the download then contains an InCopy file)', 'article-import-wizard') . '</label></p>';
+        } else {
+            echo '<p>' . esc_html__('No template uploaded.', 'article-import-wizard') . '</p>';
+        }
+
+        echo '<p><input type="file" name="aiw_indesign_template_file" accept=".idml" /></p>';
+        echo '<p class="description">' . esc_html__('Save the template in InDesign with File > Export > InDesign Markup (IDML). Mark the frames with placeholders: [TITEL], [UNTERTITEL], [AUTOR] and [REISEZEIT] (e.g. "Text und Fotos: [AUTOR]"), [VORSPANN], [TEXT] in every body text frame, [BIO] in the author box, [BILDUNTERSCHRIFT 1], ... in the caption frames. For pictures, put a small text frame with [BILD 1], [BILD 2], ..., [AUFMACHERBILD] or [AUTORENBILD] on top of the empty picture frame. The text uses the paragraph style of its placeholder.', 'article-import-wizard') . '</p>';
+    }
+
+    /**
+     * @return array<string,string> Translated labels of the InDesign style roles.
+     */
+    private static function indesign_style_labels(): array
+    {
+        return [
+            'title' => __('Title', 'article-import-wizard'),
+            'subtitle' => __('Subtitle', 'article-import-wizard'),
+            'author' => __('Author line', 'article-import-wizard'),
+            'vorspann' => __('Vorspann (first paragraph of the article)', 'article-import-wizard'),
+            'body_first' => __('First paragraph of the body text and after each heading', 'article-import-wizard'),
+            'body' => __('Body text', 'article-import-wizard'),
+            'heading2' => __('Heading ([HEADER])', 'article-import-wizard'),
+            'heading3' => __('Heading level 3 ([HEADER 3])', 'article-import-wizard'),
+            'heading4' => __('Heading level 4 ([HEADER 4])', 'article-import-wizard'),
+            'list_bullet' => __('Bulleted list', 'article-import-wizard'),
+            'list_bullet_2' => __('Bulleted list, nested', 'article-import-wizard'),
+            'list_number' => __('Numbered list', 'article-import-wizard'),
+            'list_number_2' => __('Numbered list, nested', 'article-import-wizard'),
+            'image' => __('Picture placeholder ([Bild 1])', 'article-import-wizard'),
+            'caption' => __('Picture caption', 'article-import-wizard'),
+            'bio_name' => __('Author box: name', 'article-import-wizard'),
+            'bio' => __('Author box: text', 'article-import-wizard'),
+            'bold' => __('Bold', 'article-import-wizard'),
+            'italic' => __('Italic', 'article-import-wizard'),
+            'bold_italic' => __('Bold italic', 'article-import-wizard'),
+            'link' => __('Links', 'article-import-wizard'),
+        ];
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Sanitizers
     // ---------------------------------------------------------------------------------------------
@@ -605,6 +757,85 @@ class AIW_Settings
         return array_values($ids);
     }
 
+    /**
+     * Handles the template upload of the settings form. WordPress may run a sanitize callback
+     * twice for one request, so the result is remembered.
+     */
+    public function sanitize_indesign_template($value): array
+    {
+        static $result = null;
+        if (is_array($result)) {
+            return $result;
+        }
+
+        $current = self::get_indesign_template();
+
+        if (!empty($_POST['aiw_indesign_template_remove'])) {
+            self::delete_indesign_template_file($current);
+            return $result = [];
+        }
+
+        $upload = $_FILES['aiw_indesign_template_file'] ?? null;
+        if (!is_array($upload) || empty($upload['name']) || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return $result = $current;
+        }
+
+        $name = sanitize_file_name(wp_unslash((string) $upload['name']));
+        $tmp_name = (string) ($upload['tmp_name'] ?? '');
+        if ((int) $upload['error'] !== UPLOAD_ERR_OK || strtolower((string) pathinfo($name, PATHINFO_EXTENSION)) !== 'idml' || !is_uploaded_file($tmp_name)) {
+            add_settings_error(self::OPTION_INDESIGN_TEMPLATE, 'aiw_indesign_template_type', __('Please upload the InDesign template as an .idml file.', 'article-import-wizard'));
+            return $result = $current;
+        }
+
+        $analysis = (new AIW_IDML_Builder(new AIW_ICML_Writer([])))->analyze($tmp_name);
+        if ($analysis['error'] !== '') {
+            add_settings_error(self::OPTION_INDESIGN_TEMPLATE, 'aiw_indesign_template_invalid', $analysis['error']);
+            return $result = $current;
+        }
+        if (empty($analysis['placeholders']['TEXT'])) {
+            add_settings_error(self::OPTION_INDESIGN_TEMPLATE, 'aiw_indesign_template_text', __('The InDesign template has no [TEXT] placeholder for the article text. The template was not saved.', 'article-import-wizard'));
+            return $result = $current;
+        }
+
+        $directory = trailingslashit(wp_upload_dir()['basedir']) . self::INDESIGN_TEMPLATE_DIR;
+        $file = 'vorlage-' . wp_generate_password(12, false, false) . '.idml';
+        if (!wp_mkdir_p($directory) || !move_uploaded_file($tmp_name, $directory . '/' . $file)) {
+            add_settings_error(self::OPTION_INDESIGN_TEMPLATE, 'aiw_indesign_template_save', __('The InDesign template could not be saved.', 'article-import-wizard'));
+            return $result = $current;
+        }
+
+        self::delete_indesign_template_file($current);
+
+        return $result = [
+            'file' => $file,
+            'name' => $name,
+            'uploaded' => gmdate('c'),
+            'placeholders' => $analysis['placeholders'],
+        ];
+    }
+
+    private static function delete_indesign_template_file(array $template): void
+    {
+        $file = isset($template['file']) ? basename((string) $template['file']) : '';
+        if ($file !== '') {
+            $path = trailingslashit(wp_upload_dir()['basedir']) . self::INDESIGN_TEMPLATE_DIR . '/' . $file;
+            if (is_file($path)) {
+                wp_delete_file($path);
+            }
+        }
+    }
+
+    public function sanitize_indesign_styles($value): array
+    {
+        $value = is_array($value) ? $value : [];
+        $styles = [];
+        foreach (array_keys(self::DEFAULT_INDESIGN_STYLES) as $key) {
+            $styles[$key] = isset($value[$key]) ? trim(sanitize_text_field((string) $value[$key])) : '';
+        }
+
+        return $styles;
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Getters used by the rest of the plugin
     // ---------------------------------------------------------------------------------------------
@@ -742,6 +973,57 @@ class AIW_Settings
         return array_values(array_filter(array_map('intval', $value), static function (int $id): bool {
             return $id > 0;
         }));
+    }
+
+    public static function indesign_enabled(): bool
+    {
+        return self::get_option_bool(self::OPTION_INDESIGN_ENABLED, true);
+    }
+
+    /**
+     * @return array{file?:string,name?:string,uploaded?:string,placeholders?:array<string,int>}
+     */
+    public static function get_indesign_template(): array
+    {
+        $value = get_option(self::OPTION_INDESIGN_TEMPLATE, []);
+
+        return is_array($value) ? $value : [];
+    }
+
+    /**
+     * Full path of the uploaded InDesign template, or '' when there is none.
+     */
+    public static function get_indesign_template_path(): string
+    {
+        $file = basename((string) (self::get_indesign_template()['file'] ?? ''));
+        if ($file === '') {
+            return '';
+        }
+
+        $path = trailingslashit(wp_upload_dir()['basedir']) . self::INDESIGN_TEMPLATE_DIR . '/' . $file;
+
+        return is_file($path) ? $path : '';
+    }
+
+    /**
+     * The configured InDesign style names. Empty required names fall back to their defaults.
+     *
+     * @return array<string,string>
+     */
+    public static function get_indesign_styles(): array
+    {
+        $value = get_option(self::OPTION_INDESIGN_STYLES, null);
+        $value = is_array($value) ? $value : [];
+
+        // A role that was never saved (settings not saved yet, or added in a later version) uses
+        // its default; a role an admin cleared stays empty, unless it is required.
+        $styles = [];
+        foreach (self::DEFAULT_INDESIGN_STYLES as $key => $default) {
+            $name = array_key_exists($key, $value) && is_string($value[$key]) ? trim($value[$key]) : $default;
+            $styles[$key] = ($name === '' && in_array($key, self::INDESIGN_REQUIRED_STYLES, true)) ? $default : $name;
+        }
+
+        return $styles;
     }
 
     public static function get_option_string(string $option, string $default): string

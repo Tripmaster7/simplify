@@ -214,6 +214,52 @@ class AIW_Admin_I18n
         'DOCX document content is missing.' => 'Der Dokumentinhalt fehlt in der DOCX-Datei.',
         'Back to overview: %s' => 'Zurück zur Übersicht: %s',
         'New' => 'Neu',
+        'Download for InDesign' => 'Für InDesign herunterladen',
+        'This article has no InDesign data. Import it again with the wizard to download it for InDesign.' => 'Für diesen Artikel liegen keine InDesign-Daten vor. Importieren Sie ihn erneut mit dem Assistenten, um ihn für InDesign herunterzuladen.',
+        'The InDesign package could not be created.' => 'Das InDesign-Paket konnte nicht erstellt werden.',
+        'InDesign Export' => 'InDesign-Export',
+        'InDesign Download' => 'InDesign-Download',
+        'Offer a download for InDesign in the wizard and in the post list' => 'Download für InDesign im Assistenten und in der Beitragsliste anbieten',
+        'Style Names in the Template' => 'Formatnamen in der Vorlage',
+        'Enter the names exactly as they appear in the InDesign template. For a style inside a style group, write Group:Style. Fields marked "optional" may stay empty.' => 'Die Namen genau so eingeben, wie sie in der InDesign-Vorlage stehen. Für ein Format in einer Formatgruppe Gruppe:Format schreiben. Felder mit „optional“ dürfen leer bleiben.',
+        'Character style' => 'Zeichenformat',
+        'Paragraph style' => 'Absatzformat',
+        'optional' => 'optional',
+        'Subtitle' => 'Untertitel',
+        'Author line' => 'Autorenzeile',
+        'Body text' => 'Fließtext',
+        'Heading ([HEADER])' => 'Zwischenüberschrift ([HEADER])',
+        'Heading level 3 ([HEADER 3])' => 'Zwischenüberschrift Ebene 3 ([HEADER 3])',
+        'Heading level 4 ([HEADER 4])' => 'Zwischenüberschrift Ebene 4 ([HEADER 4])',
+        'Bulleted list' => 'Aufzählung',
+        'Bulleted list, nested' => 'Aufzählung, eingerückt',
+        'Numbered list' => 'Nummerierte Liste',
+        'Numbered list, nested' => 'Nummerierte Liste, eingerückt',
+        'Picture placeholder ([Bild 1])' => 'Bildplatzhalter ([Bild 1])',
+        'Picture caption' => 'Bildunterschrift',
+        'Author box: name' => 'Autorenbox: Name',
+        'Author box: text' => 'Autorenbox: Text',
+        'Bold' => 'Fett',
+        'Italic' => 'Kursiv',
+        'Bold italic' => 'Fett kursiv',
+        'Links' => 'Links',
+        'Vorspann (first paragraph of the article)' => 'Vorspann (erster Absatz des Artikels)',
+        'First paragraph of the body text and after each heading' => 'Erster Absatz des Fließtexts und nach jeder Zwischenüberschrift',
+        'An empty field uses a related style: headings level 3 and 4 use the heading style, lists and the first paragraph use the body text. Without character styles, bold and italic are applied directly to the text. With a template (above), title, subtitle, author line, Vorspann, captions and author box take their style from the placeholder in the template instead.' => 'Ein leeres Feld nutzt ein verwandtes Format: Zwischenüberschriften Ebene 3 und 4 nutzen das Format der Zwischenüberschrift, Listen und erster Absatz den Fließtext. Ohne Zeichenformate werden fett und kursiv direkt am Text formatiert. Mit Vorlage (oben) übernehmen Titel, Untertitel, Autorenzeile, Vorspann, Bildunterschriften und Autorenbox das Format ihres Platzhalters in der Vorlage.',
+        'With an article template (below), the download is a ZIP file with the filled InDesign document (.idml) and its pictures in the Links folder. Without a template, it contains the article as an InCopy file (.icml) to place into a text frame with File > Place.' => 'Mit Artikelvorlage (unten) ist der Download eine ZIP-Datei mit dem fertig gefüllten InDesign-Dokument (.idml) und den Bildern im Ordner Links. Ohne Vorlage enthält sie den Artikel als InCopy-Datei (.icml), die mit Datei > Platzieren in einen Textrahmen gesetzt wird.',
+        'Article Template (IDML)' => 'Artikelvorlage (IDML)',
+        'Placeholders found:' => 'Gefundene Platzhalter:',
+        'Not in the template (these parts of the article are left out):' => 'Nicht in der Vorlage (diese Teile des Artikels entfallen):',
+        'Remove the template (the download then contains an InCopy file)' => 'Vorlage entfernen (der Download enthält dann eine InCopy-Datei)',
+        'No template uploaded.' => 'Keine Vorlage hochgeladen.',
+        'Save the template in InDesign with File > Export > InDesign Markup (IDML). Mark the frames with placeholders: [TITEL], [UNTERTITEL], [AUTOR] and [REISEZEIT] (e.g. "Text und Fotos: [AUTOR]"), [VORSPANN], [TEXT] in every body text frame, [BIO] in the author box, [BILDUNTERSCHRIFT 1], ... in the caption frames. For pictures, put a small text frame with [BILD 1], [BILD 2], ..., [AUFMACHERBILD] or [AUTORENBILD] on top of the empty picture frame. The text uses the paragraph style of its placeholder.' => 'Die Vorlage in InDesign mit Datei > Exportieren > InDesign Markup (IDML) speichern. Die Rahmen mit Platzhaltern kennzeichnen: [TITEL], [UNTERTITEL], [AUTOR] und [REISEZEIT] (z. B. „Text und Fotos: [AUTOR]“), [VORSPANN], [TEXT] in jedem Fließtextrahmen, [BIO] im Autorenkasten, [BILDUNTERSCHRIFT 1], … in den Bildunterschriftrahmen. Für Bilder einen kleinen Textrahmen mit [BILD 1], [BILD 2], …, [AUFMACHERBILD] oder [AUTORENBILD] auf den leeren Bildrahmen legen. Der Text erhält das Absatzformat seines Platzhalters.',
+        'Please upload the InDesign template as an .idml file.' => 'Bitte die InDesign-Vorlage als .idml-Datei hochladen.',
+        'The InDesign template has no [TEXT] placeholder for the article text. The template was not saved.' => 'Die InDesign-Vorlage hat keinen Platzhalter [TEXT] für den Artikeltext. Die Vorlage wurde nicht gespeichert.',
+        'The InDesign template could not be saved.' => 'Die InDesign-Vorlage konnte nicht gespeichert werden.',
+        'The InDesign template has no [TEXT] placeholder for the article text.' => 'Die InDesign-Vorlage hat keinen Platzhalter [TEXT] für den Artikeltext.',
+        'The InDesign template is not a valid IDML file. In InDesign, save it with File > Export > InDesign Markup (IDML).' => 'Die InDesign-Vorlage ist keine gültige IDML-Datei. In InDesign mit Datei > Exportieren > InDesign Markup (IDML) speichern.',
+        'The InDesign template has no picture frame under the placeholder [%s].' => 'In der InDesign-Vorlage liegt unter dem Platzhalter [%s] kein Bildrahmen.',
+        '%s could not be placed in the InDesign document (only JPEG, PNG and TIFF). Place it by hand from the Links folder.' => '%s konnte nicht ins InDesign-Dokument gesetzt werden (nur JPEG, PNG und TIFF). Bitte von Hand aus dem Ordner Links platzieren.',
     ];
 
     public function register(): void
@@ -249,8 +295,12 @@ class AIW_Admin_I18n
             return false;
         }
 
+        // Wizard pages, and the plugin's own admin-post requests, whose error messages are shown
+        // on the wizard page.
         $page = isset($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
-        if ($page !== 'aiw-import-wizard' && $page !== 'aiw-settings') {
+        $action = isset($_REQUEST['action']) ? sanitize_key((string) $_REQUEST['action']) : '';
+        $option_page = isset($_POST['option_page']) ? sanitize_key((string) $_POST['option_page']) : '';
+        if ($page !== 'aiw-import-wizard' && $page !== 'aiw-settings' && strpos($action, 'aiw_') !== 0 && $option_page !== 'aiw_settings_group') {
             return false;
         }
 

@@ -281,6 +281,7 @@ class AIW_Wizard_Controller
             'author_membership' => 'AUTHOR_MEMBERSHIP',
             'writing_date' => 'WRITING_DATE',
             'bio' => 'BIO',
+            'travel_period' => 'REISEZEIT',
         ];
         foreach ($duplicate_markers as $key => $marker) {
             if (!empty($doc_metadata[$key . '_duplicate'])) {
@@ -324,6 +325,14 @@ class AIW_Wizard_Controller
         if ($post_content === '' && !empty($doc_parse['content'])) {
             $post_content = wp_kses_post((string) $doc_parse['content']);
         }
+
+        // Print (InDesign) keeps the subtitle separate and needs none of the web additions below.
+        // In print, the first paragraph of the article becomes the Vorspann (intro).
+        $print_subtitle = !empty($doc_parse['subtitle']) ? $this->normalize_title_text((string) $doc_parse['subtitle']) : '';
+        $print_content = $post_content;
+        $travel_period = !empty($doc_metadata['travel_period'])
+            ? sanitize_text_field((string) $doc_metadata['travel_period'])
+            : ($travel_date !== '' ? date_i18n('F Y', strtotime($travel_date)) : '');
 
         if (!empty($doc_parse['subtitle'])) {
             $post_content = '<h2>' . esc_html($this->normalize_title_text((string) $doc_parse['subtitle'])) . '</h2>' . "\n" . $post_content;
@@ -488,6 +497,17 @@ class AIW_Wizard_Controller
             'validation_report' => $validation_report,
             'invalid_links_count' => count($link_validation['invalid']),
             'metadata_warnings' => $metadata_warnings,
+            'print_article' => AIW_InDesign_Export::print_data(
+                $post_title,
+                $print_subtitle,
+                $travel_period,
+                $print_content,
+                (string) $attributed_author->display_name,
+                $final_author_bio,
+                $headline_image_id > 0 ? (int) $headline_image_id : (int) $previous_headline_image_id,
+                $inline_image_slots,
+                (int) $final_author_image_id
+            ),
             'created_at' => gmdate('c'),
         ];
 
@@ -785,6 +805,12 @@ class AIW_Wizard_Controller
         update_post_meta($post_id, '_aiw_restriction_shortcode_end', isset($preview['restriction_end']) ? (string) $preview['restriction_end'] : '');
         update_post_meta($post_id, '_aiw_category_ids', $category_ids);
         update_post_meta($post_id, '_aiw_travel_date', isset($preview['travel_date']) ? (string) $preview['travel_date'] : '');
+        if (isset($preview['print_article']) && is_array($preview['print_article'])) {
+            // On an update the post keeps its title; update_post_meta() unslashes, so slash first.
+            $print_article = $preview['print_article'];
+            $print_article['title'] = (string) get_the_title($post_id);
+            update_post_meta($post_id, AIW_InDesign_Export::PRINT_META, wp_slash($print_article));
+        }
 
         if (AIW_Settings::notifications_enabled()) {
             $notify_email = AIW_Settings::get_option_string(AIW_Settings::OPTION_NOTIFY_EMAIL, get_option('admin_email', ''));
@@ -808,7 +834,7 @@ class AIW_Wizard_Controller
             isset($preview['attributed_author_name']) ? (string) $preview['attributed_author_name'] : ''
         );
 
-        $this->redirect_with_message($message, $edit_url);
+        $this->redirect_with_message($message, $edit_url, (int) $post_id);
     }
 
     private function can_access_wizard(): bool
@@ -1637,7 +1663,7 @@ class AIW_Wizard_Controller
         return $content;
     }
 
-    private function preview_transient_key(string $token): string
+    public static function preview_transient_key(string $token): string
     {
         return 'aiw_preview_' . get_current_user_id() . '_' . $token;
     }
@@ -1777,12 +1803,16 @@ class AIW_Wizard_Controller
         exit;
     }
 
-    private function redirect_with_message(string $message, string $edit_url = ''): void
+    private function redirect_with_message(string $message, string $edit_url = '', int $post_id = 0): void
     {
         $args = ['page' => 'aiw-import-wizard', 'aiw_message' => rawurlencode($message)];
 
         if ($edit_url !== '') {
             $args['aiw_edit_url'] = rawurlencode($edit_url);
+        }
+
+        if ($post_id > 0) {
+            $args['aiw_post_id'] = $post_id;
         }
 
         $url = add_query_arg($args, admin_url('admin.php'));

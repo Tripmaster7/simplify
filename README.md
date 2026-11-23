@@ -2,7 +2,7 @@
 
 A guided WordPress admin workflow for turning structured DOCX files into review-ready posts. The plugin is designed for editors and authors who should not need to assemble an article manually in the block editor.
 
-**Current version:** 1.3.8
+**Current version:** 1.4.0
 
 **Author:** GitHub Copilot and Jens
 
@@ -29,6 +29,7 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 - Replaces broken links with `CHECK LINK` or reports them without changing the link
 - Creates the finished article as a draft or publishes it immediately, depending on the editor's choice
 - Sends an import summary email with a link to the draft
+- Exports the article for the printed magazine: fills the InDesign article template (`.idml`) with text, captions and pictures, or provides an InCopy story (`.icml`) when no template is set
 - Adds a "back to overview" link to sub-pages of selected pages, such as the chapters of a multi-page guide
 - Includes German admin translations and a printable editorial cheat sheet
 
@@ -42,7 +43,7 @@ A guided WordPress admin workflow for turning structured DOCX files into review-
 
 ## Installation
 
-Download `article-import-wizard-v1.3.8.zip` from the [latest GitHub release](https://github.com/Tripmaster7/simplify/releases/latest) and upload it under **Plugins > Add New > Upload Plugin** (replace the existing plugin when prompted), or install manually:
+Download `article-import-wizard-v1.4.0.zip` from the [latest GitHub release](https://github.com/Tripmaster7/simplify/releases/latest) and upload it under **Plugins > Add New > Upload Plugin** (replace the existing plugin when prompted), or install manually:
 
 1. Copy the `article-import-wizard` directory to `wp-content/plugins/`.
 2. Activate **Article Import Wizard** in WordPress.
@@ -95,6 +96,7 @@ The importer recognizes these metadata markers:
 [AUTHOR_MEMBERSHIP: 01234]
 [WRITING_DATE: 2026-08-04]
 [BIO: Short author biography]
+[REISEZEIT: Mai bis August 2024]
 [RESTRICT]
 ```
 
@@ -114,6 +116,8 @@ Use numbered image placeholders where inline images should appear:
 [Bild 2: Optional caption]
 [Image 3]
 ```
+
+`[REISEZEIT: ...]` (alias `TRAVEL_PERIOD`) is only used in print, for the travel period in the byline. In print, the first paragraph of the article also becomes the Vorspann (intro); on the website it stays the first paragraph.
 
 `[WRITING_DATE: ...]` becomes the post date. It accepts `2025-01-15` or `15.01.2025`; an invalid or future date is reported in the preview. Without the marker, WordPress uses the publish date.
 
@@ -176,6 +180,12 @@ If a frontend login handler reloads a page containing `[login_form]` instead of 
 - Send an email after each completed import (default: on)
 - Notification email address
 
+**InDesign Export**
+
+- InDesign download (default: on): shows **Download for InDesign** in the wizard and an **InDesign** link in the post list
+- Article template (IDML) with placeholders, checked on upload (see [Preparing the Article Template](#preparing-the-article-template))
+- Style names in the template: the paragraph and character style used for each part of the article (see [Style Names](#style-names))
+
 The inline image slots and broken-link handling can be adjusted for an individual import before generating its preview.
 
 ## Page Navigation
@@ -183,6 +193,71 @@ The inline image slots and broken-link handling can be adjusted for an individua
 Under **Page Navigation > Back Link on Sub-Pages**, the settings page lists every page that has sub-pages. For each selected page, its published sub-pages show a link back to it at the top and bottom, for example "← Zurück zur Übersicht: dzg Ausrüstungs Ratgeber" on each chapter of a guide.
 
 The link is added when the page is displayed and is not stored in the page content, so editing or replacing a sub-page never removes or duplicates it, and it always uses the overview's current title and address. It only appears while the overview page is published and not password-protected. It uses the CSS class `aiw-back-link`.
+
+## InDesign Export
+
+Articles can also be laid out in the printed magazine. **Download for InDesign** is offered in the preview (before the import is completed), next to **Open Article** after the import, and as an **InDesign** link under the title of imported posts in the post list. It downloads a ZIP file:
+
+```text
+<Title>.zip
+|-- <Title>.idml            The article template, filled with this article
+|-- Links/
+|   |-- Aufmacherbild.jpg   Headline picture
+|   |-- Bild-1.jpg          Picture for [Bild 1], Bild-2.jpg for [Bild 2], ...
+|   `-- Autorenbild.jpg     Author picture
+`-- Hinweise.txt            Only when something could not be placed
+```
+
+Unpack the ZIP and open the `.idml` file in InDesign. If InDesign reports missing links, select all links in the Links panel and use **Relink to Folder** with the `Links` folder.
+
+### Preparing the Article Template
+
+An administrator uploads the template under **Settings > Article Import Wizard > InDesign Export > Article Template (IDML)**. Save it in InDesign with **File > Export > InDesign Markup (IDML)**. Before that, the layout team types placeholders into the template's frames, each in the paragraph style the text should get:
+
+| Placeholder | Where | Filled with |
+| --- | --- | --- |
+| `[TITEL]` | Title frame | Article title |
+| `[UNTERTITEL]` | Subtitle frame | `[SUBTITLE]` from the DOCX |
+| `[AUTOR]` | Anywhere in a line, e.g. `Text und Fotos: [AUTOR]` | Public author name |
+| `[REISEZEIT]` | Anywhere in a line, e.g. `Reisezeit: [REISEZEIT]` | `[REISEZEIT: ...]` from the DOCX, otherwise month and year of the wizard's travel date |
+| `[VORSPANN]` | Own paragraph in the intro frame | First paragraph of the article |
+| `[TEXT]` | Every body text frame | The body text. All `[TEXT]` frames are linked into one story in reading order: spread by spread, left to right, top to bottom. Other text in these frames is replaced. |
+| `[BIO]` | Own paragraph in the author box | Author bio; the rest of the box (e.g. the "Unterwegs-Sein" rubric) stays |
+| `[BILDUNTERSCHRIFT n]` | Caption frame | Caption from `[Bild n: caption]` |
+| `[BILD n]`, `[AUFMACHERBILD]`, `[AUTORENBILD]` | Small text frame on top of an empty picture frame | The picture is placed into the picture frame below, filling it proportionally; the small label frame is removed |
+
+A line whose placeholder has no value is removed, for example `Reisezeit: [REISEZEIT]` without a travel period, or a caption frame for a picture the article does not have. Picture frames without a picture stay empty. Everything else in the template (rubrics, side tabs, footers, master pages) stays as it is. After the upload, the settings page lists the placeholders it found; a template without `[TEXT]` is rejected.
+
+The body text uses the styles of the template: body paragraphs keep the style of the `[TEXT]` placeholder, headings use the heading style from **Style Names in the Template** (default: `Zwischenueberschrift`). Bold and italic become the matching font style of the paragraph's font (for example *Bold Italic* in an italic paragraph), unless character styles are named in the settings. Without list styles, list items keep their bullet or number as text. Picture markers (`[Bild n]`) are taken out of the body text, because the pictures sit in their own frames. Text that does not fit stays overset; frames left over stay empty, so the layout team adjusts the page count by hand.
+
+The file `DemoVorlage-Platzhalter.idml` in the repository is the demo layout with all placeholders, as an example for preparing the real template.
+
+### Without a Template
+
+Without a template, the ZIP contains `<Title>.icml`, an InCopy story with the whole article (title, subtitle, author, Vorspann, body, captions, bio), instead of the `.idml`. Place it into a text frame with **File > Place**; InDesign uses the document's own definition of every style with the same name.
+
+### Style Names
+
+| Article part | Default style |
+| --- | --- |
+| Title | Artikeltitel |
+| Subtitle, author line | Untertitel |
+| Vorspann (first paragraph) | Vorspann |
+| Body text | Fliesstext |
+| First body paragraph and after each heading | *(empty: body text)* |
+| `[HEADER]`, `[HEADER 3]`, `[HEADER 4]` | Zwischenueberschrift *(levels 3 and 4 empty: same style)* |
+| Bulleted and numbered lists | *(empty: body text with bullet or number as text)* |
+| Picture caption | Bildunterschrift |
+| Author box: name, text | Zwischenueberschrift, Vorspann |
+| Bold, italic, bold italic, links | *(empty: font style of the paragraph's font)* |
+
+The defaults are the style names of the demo template. All names can be changed under **Settings > Article Import Wizard > InDesign Export**; a style inside a style group is written `Group:Style`. With a template, title, subtitle, author line, Vorspann, captions and author box always take the style of their placeholder, so these names only matter for the InCopy file.
+
+Large photos are packed as the full-size original, not the copy WordPress scales down for the website. The print data is stored with the post (`_aiw_print_article`) when the import is completed, so the download stays available later. Posts imported before this feature have no print data; import them again to get the download.
+
+### InDesign Script
+
+The InDesign script in [indesign-article-import/](indesign-article-import/) imports the same Word file directly in InDesign, without WordPress: into a template with the placeholders above, or into a selected text frame of any document. See its [README](indesign-article-import/README.md).
 
 ## Author Attribution and Audit Data
 
@@ -228,6 +303,9 @@ article-import-wizard/
 |-- includes/               Import, parsing, author, link, and settings services
 |-- languages/              German translation files
 `-- templates/              Wizard step templates
+indesign-article-import/
+|-- ArtikelImport.jsx       InDesign script: imports the same DOCX into an InDesign document
+`-- tests/                  Node tests of the import rules, test DOCX, InDesign test harness
 ```
 
 The detailed implementation blueprint is available in [wordpress-article-importer-blueprint.md](wordpress-article-importer-blueprint.md).
