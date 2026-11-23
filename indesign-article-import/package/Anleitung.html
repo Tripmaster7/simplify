@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Artikel-Import für InDesign – Anleitung</title>
+<style>
+  body { font: 15px/1.5 "Segoe UI", Helvetica, Arial, sans-serif; color: #222; max-width: 820px; margin: 2em auto; padding: 0 1.2em; }
+  h1 { font-size: 1.9em; margin-bottom: .1em; }
+  h2 { font-size: 1.3em; margin-top: 1.8em; border-bottom: 2px solid #ddd; padding-bottom: .2em; }
+  h3 { font-size: 1.05em; margin-top: 1.3em; }
+  .meta { color: #666; margin-top: 0; }
+  code, kbd { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #f3f3f3; padding: 0 .25em; border-radius: 3px; }
+  table { border-collapse: collapse; width: 100%; margin: .6em 0; }
+  th, td { border: 1px solid #ccc; padding: .35em .5em; text-align: left; vertical-align: top; }
+  th { background: #f3f3f3; }
+  .note { background: #fff8e0; border-left: 4px solid #e0b000; padding: .5em .8em; }
+  pre { background: #f6f6f6; padding: .7em .9em; border-radius: 4px; overflow-x: auto; font-size: .9em; }
+  ol li, ul li { margin: .2em 0; }
+  @media print { body { margin: 0; max-width: none; font-size: 11pt; } h2 { break-after: avoid; } table, pre { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<h1>Artikel-Import für InDesign</h1>
+<p class="meta">Version 1.0.0 · Skript <code>ArtikelImport.jsx</code> · für Adobe InDesign</p>
+
+<p>Das Skript setzt einen Artikel aus einer Word-Datei (<code>.docx</code>) in das geöffnete InDesign-Dokument. Die Word-Datei enthält kurze Marken in eckigen Klammern, zum Beispiel <code>[TITLE: …]</code> für den Titel oder <code>[Bild 1: …]</code> für eine Bildunterschrift. Das Skript liest diese Marken und setzt jeden Teil an die richtige Stelle.</p>
+<ul>
+  <li><b>Vorlage mit Platzhaltern:</b> Der Artikel kommt in die Rahmen mit <code>[TITEL]</code>, <code>[TEXT]</code>, <code>[BILD 1]</code> usw. Die Bilder werden ebenfalls platziert.</li>
+  <li><b>Jedes andere Dokument:</b> Sie wählen einen Textrahmen aus (oder klicken in einen Text), und der ganze Artikel wird dort mit den Absatzformaten des Dokuments gesetzt.</li>
+</ul>
+
+<h2>Inhalt des Pakets</h2>
+<table>
+  <tr><th>Datei</th><th>Wozu</th></tr>
+  <tr><td><code>ArtikelImport.jsx</code></td><td>Das Skript</td></tr>
+  <tr><td><code>Anleitung.html</code> / <code>Anleitung.pdf</code></td><td>Diese Anleitung</td></tr>
+  <tr><td><code>Guide.html</code> / <code>Guide.pdf</code></td><td>Dieselbe Anleitung auf Englisch</td></tr>
+  <tr><td><code>Beispiel/</code></td><td>Ein Beispielartikel mit vier Beispielbildern zum Ausprobieren</td></tr>
+</table>
+
+<h2>1. Installation</h2>
+<ol>
+  <li>In InDesign <b>Fenster &gt; Hilfsprogramme &gt; Skripte</b> öffnen.</li>
+  <li>Mit der rechten Maustaste auf <b>Benutzer</b> klicken und <b>Im Explorer anzeigen</b> (Windows) bzw. <b>Im Finder anzeigen</b> (Mac) wählen.</li>
+  <li><code>ArtikelImport.jsx</code> in den Ordner <b>Scripts Panel</b> kopieren, der sich öffnet.</li>
+  <li>Das Skript erscheint jetzt im Skripte-Bedienfeld unter <b>Benutzer</b>.</li>
+</ol>
+<p>Für ein Update die Datei einfach durch die neue ersetzen.</p>
+
+<h2>2. Einen Artikel importieren</h2>
+<ol>
+  <li>Die Vorlage oder das Dokument öffnen, in das der Artikel soll.<br>
+      Ohne Platzhalter: den Textrahmen für den Artikel auswählen oder in den Text klicken, wo er beginnen soll.</li>
+  <li>Im Skripte-Bedienfeld auf <b>ArtikelImport.jsx</b> doppelklicken.</li>
+  <li>Die Word-Datei (<code>.docx</code>) auswählen.</li>
+  <li>Den Dialog prüfen:
+    <ul>
+      <li><b>Autor</b> und <b>Reisezeit</b> kommen aus der Word-Datei und können hier geändert werden.</li>
+      <li><b>Bilder</b> zeigt, welche Bilddatei für welchen Platzhalter gefunden wurde. Mit <b>Ordner…</b> wählen Sie einen anderen Bilderordner.</li>
+      <li><b>Bitte prüfen</b> listet Probleme, z. B. ein fehlendes Bild oder eine nicht erkannte Marke.</li>
+      <li><b>Formate…</b> legt die Absatz- und Zeichenformate fest (siehe <a href="#formate">Abschnitt 7</a>).</li>
+    </ul>
+  </li>
+  <li>Auf <b>Importieren</b> klicken. Die Eingabetaste startet den Import nicht; nur die Schaltfläche.</li>
+</ol>
+<p>Danach meldet das Skript, was gemacht wurde und was noch zu prüfen ist, zum Beispiel Übersatz. <b>Bearbeiten &gt; Rückgängig</b> macht den ganzen Import in einem Schritt rückgängig.</p>
+
+<h2>3. Die Word-Datei</h2>
+<p>Die Marken stehen jeweils in einem eigenen Absatz (Bildmarken auch mitten im Text). Groß- und Kleinschreibung spielt keine Rolle.</p>
+<table>
+  <tr><th>Marke in Word</th><th>Ergebnis in InDesign</th></tr>
+  <tr><td><code>[TITLE: Überschrift]</code></td><td>Titel → <code>[TITEL]</code>. Ohne diese Marke wird ein Absatz im Word-Format <i>Titel</i> oder <i>Überschrift 1</i> zum Titel, sonst der erste Absatz (der dann nicht noch einmal im Text steht).</td></tr>
+  <tr><td><code>[SUBTITLE: Unterzeile]</code></td><td>Untertitel → <code>[UNTERTITEL]</code></td></tr>
+  <tr><td><code>[AUTHOR_NAME: Vorname Nachname]</code></td><td>Autorname → <code>[AUTOR]</code>; im Dialog änderbar</td></tr>
+  <tr><td><code>[REISEZEIT: Mai bis August 2024]</code></td><td>Reisezeit → <code>[REISEZEIT]</code>; im Dialog änderbar</td></tr>
+  <tr><td><code>[HEADER Zwischenüberschrift]</code><br><code>[HEADER 3 …]</code>, <code>[HEADER 4 …]</code></td><td>Zwischenüberschriften im Fließtext (drei Ebenen)</td></tr>
+  <tr><td><code>[Bild 1: Bildunterschrift]</code><br><code>[Bild 2]</code>, <code>[Image 3: …]</code></td><td>Die Bildunterschrift kommt in <code>[BILDUNTERSCHRIFT 1]</code>, die Bilddatei <i>Bild 1</i> in <code>[BILD 1]</code>. Die Marke selbst verschwindet aus dem Text.</td></tr>
+  <tr><td><code>[BIO: Kurzer Text über die Autorin]</code></td><td>Autoren-Bio → <code>[BIO]</code>. Darf mehrere Absätze lang sein; mit <code>]</code> abschließen.</td></tr>
+  <tr><td><code>[AUTHOR_MEMBERSHIP: …]</code>, <code>[WRITING_DATE: …]</code>, <code>[RESTRICT]</code></td><td>Nur für die Website; im Heft werden sie entfernt.</td></tr>
+</table>
+<ul>
+  <li>Der <b>erste Absatz</b> des Artikels wird zum <b>Vorspann</b>.</li>
+  <li><b>Fett</b>, <i>kursiv</i>, Links sowie Aufzählungen und nummerierte Listen (auch verschachtelt) bleiben erhalten. Links werden zu InDesign-Hyperlinks und funktionieren damit in einem interaktiven PDF.</li>
+  <li>Unterstreichungen, Farben, Schriftarten, Tabellen und Bilder in der Word-Datei werden nicht übernommen.</li>
+  <li>Immer als <code>.docx</code> speichern, nicht als <code>.doc</code>.</li>
+</ul>
+<p>Eine Vorlage zum Abtippen:</p>
+<pre>[TITLE: ]
+[SUBTITLE: ]
+[AUTHOR_NAME: ]
+[REISEZEIT: ]
+
+Erster Absatz (wird zum Vorspann) ...
+
+Zweiter Absatz mit Bildmarke [Bild 1: Bildunterschrift].
+
+[HEADER Zwischenüberschrift]
+Weiterer Absatz.
+
+[Bild 2: Bildunterschrift]
+
+[BIO: ]</pre>
+
+<h2>4. Bilder</h2>
+<p>Das Skript sucht die Bilddateien im Ordner der Word-Datei und in dessen Unterordnern <code>Links</code>, <code>Bilder</code>, <code>Images</code> und <code>Fotos</code>. Der Dateiname entscheidet, wohin ein Bild kommt. Groß- und Kleinschreibung, Leerzeichen, <code>_</code> und <code>-</code> spielen keine Rolle.</p>
+<table>
+  <tr><th>Platzhalter</th><th>Dateinamen, z. B.</th></tr>
+  <tr><td><code>[AUFMACHERBILD]</code></td><td><code>Aufmacherbild.jpg</code>, <code>Titelbild.jpg</code></td></tr>
+  <tr><td><code>[BILD n]</code></td><td><code>Bild 1.jpg</code>, <code>Bild_1.jpg</code>, <code>Bild-01.tif</code>, <code>Image 1.png</code></td></tr>
+  <tr><td><code>[AUTORENBILD]</code></td><td><code>Autorenbild.jpg</code>, <code>BioPic.jpg</code></td></tr>
+</table>
+<p>JPEG-, PNG-, TIFF-, PSD-, PDF-, EPS- und AI-Dateien werden platziert und mit der Originaldatei verknüpft. Die Bilder also nach dem Import nicht verschieben, oder später im Verknüpfungen-Bedienfeld neu verknüpfen.</p>
+
+<h2>5. Vorlage mit Platzhaltern</h2>
+<p>Eine Vorlage bekommt Textrahmen mit diesen Platzhaltern. Gestaltung, Formate, Musterseiten usw. bleiben ganz bei Ihnen.</p>
+<table>
+  <tr><th>Platzhalter</th><th>Wo</th><th>Wird ersetzt durch</th></tr>
+  <tr><td><code>[TITEL]</code></td><td>Titelrahmen</td><td>Artikeltitel</td></tr>
+  <tr><td><code>[UNTERTITEL]</code></td><td>Untertitelrahmen</td><td>Untertitel</td></tr>
+  <tr><td><code>[AUTOR]</code></td><td>Irgendwo in einer Zeile, z. B. <code>Text und Fotos: [AUTOR]</code></td><td>Autorname aus dem Dialog</td></tr>
+  <tr><td><code>[REISEZEIT]</code></td><td>Irgendwo in einer Zeile, z. B. <code>Reisezeit: [REISEZEIT]</code></td><td>Reisezeit aus dem Dialog</td></tr>
+  <tr><td><code>[VORSPANN]</code></td><td>Eigener Absatz im Vorspann-Rahmen</td><td>Erster Absatz des Artikels</td></tr>
+  <tr><td><code>[TEXT]</code></td><td>Jeder Fließtextrahmen</td><td>Der Fließtext. Alle <code>[TEXT]</code>-Rahmen werden in Leserichtung zu einem Textfluss verkettet: Druckbogen für Druckbogen, links vor rechts, oben vor unten. Anderer Text in diesen Rahmen wird ersetzt.</td></tr>
+  <tr><td><code>[BIO]</code></td><td>Eigener Absatz im Autorenkasten</td><td>Autoren-Bio; der Rest des Kastens bleibt</td></tr>
+  <tr><td><code>[BILDUNTERSCHRIFT n]</code></td><td>Bildunterschriftrahmen</td><td>Bildunterschrift aus <code>[Bild n: …]</code></td></tr>
+  <tr><td><code>[BILD n]</code>, <code>[AUFMACHERBILD]</code>, <code>[AUTORENBILD]</code></td><td>Kleiner Textrahmen <b>auf</b> einem leeren Grafikrahmen</td><td>Das Bild kommt in den Grafikrahmen darunter; der kleine Textrahmen wird gelöscht. Ohne <i>Rahmeneinpassungsoptionen</i> füllt das Bild den Rahmen proportional und zentriert.</td></tr>
+</table>
+<ul>
+  <li>Eine Zeile, deren Platzhalter keinen Wert bekommt, wird entfernt, z. B. <code>Reisezeit: [REISEZEIT]</code> ohne Reisezeit.</li>
+  <li>Bildrahmen ohne Bild bleiben leer; Text, der nicht passt, bleibt im Übersatz. Seitenzahl und Umbruch passen Sie danach von Hand an.</li>
+  <li>Platzhalter behalten ihr Absatzformat und ihre lokale Formatierung. Zwischenüberschriften, Listen und Bildunterschriften im Fließtext bekommen die Formate aus <b>Formate…</b>.</li>
+  <li>Eine Vorlage kann als <code>.indt</code> gespeichert werden; InDesign öffnet dann jedes Mal eine unbenannte Kopie.</li>
+</ul>
+
+<h2>6. Dokument ohne Platzhalter</h2>
+<p>Hat das Dokument keinen <code>[TEXT]</code>-Platzhalter, braucht das Skript ein Ziel: einen ausgewählten Textrahmen (der Artikel wird am Ende seines Textabschnitts angefügt), eine Einfügemarke im Text oder ausgewählten Text (der ersetzt wird). Der ganze Artikel wird dort in dieser Reihenfolge gesetzt: Titel, Untertitel, Autor, Vorspann, Fließtext mit den Bildmarken und Bildunterschriften, Autorname und Bio.</p>
+<p>Bilder werden in diesem Fall nicht platziert, weil das Skript nicht wissen kann, wohin sie sollen. Die Zeilen <code>[Bild 1]</code> usw. zeigen, wo sie hingehören.</p>
+
+<h2 id="formate">7. Formate</h2>
+<p><b>Formate…</b> im Dialog legt für jeden Teil des Artikels ein Format des geöffneten Dokuments fest. Die Auswahl wird im Dokument gespeichert: Eine Vorlage, die nach der Auswahl gespeichert wird, behält sie. Die letzte Auswahl gilt außerdem als Vorschlag für andere Dokumente.</p>
+<table>
+  <tr><th>Teil des Artikels</th><th>Voreingestelltes Format</th><th>Wenn es fehlt</th></tr>
+  <tr><td>Titel</td><td>Artikeltitel</td><td>Fließtext</td></tr>
+  <tr><td>Untertitel, Autorzeile</td><td>Untertitel</td><td>Fließtext</td></tr>
+  <tr><td>Vorspann</td><td>Vorspann</td><td>Fließtext</td></tr>
+  <tr><td>Fließtext</td><td>Fliesstext</td><td>Das Format des <code>[TEXT]</code>-Platzhalters bzw. des Texts an der Einfügemarke</td></tr>
+  <tr><td>Erster Absatz im Text und nach jeder Zwischenüberschrift</td><td><i>(keins)</i></td><td>Fließtext</td></tr>
+  <tr><td><code>[HEADER]</code> / <code>[HEADER 3]</code> / <code>[HEADER 4]</code></td><td>Zwischenueberschrift</td><td>Fließtext / Ebene 2 / Ebene 3</td></tr>
+  <tr><td>Aufzählungen und nummerierte Listen, Ebene 1 und 2</td><td><i>(keins)</i></td><td>Fließtext, Aufzählungszeichen bzw. Nummer als Text</td></tr>
+  <tr><td>Bildmarke <code>[Bild n]</code> (nur ohne Platzhalter)</td><td><i>(keins)</i></td><td>Fließtext</td></tr>
+  <tr><td>Bildunterschrift</td><td>Bildunterschrift</td><td>Fließtext</td></tr>
+  <tr><td>Autorenkasten: Name, Text</td><td>Zwischenueberschrift, Vorspann</td><td>Zwischenüberschrift, Fließtext</td></tr>
+  <tr><td>Fett, kursiv, fett-kursiv, Links (Zeichenformate)</td><td><i>[Schriftschnitt des Absatzes]</i></td><td>Der passende Schnitt der Absatzschrift, z. B. <i>Bold Italic</i> in einem kursiven Absatz</td></tr>
+</table>
+<p>Die Formatnamen müssen nicht genau so heißen; wählen Sie unter <b>Formate…</b> einfach die eigenen Formate aus. Formate in Formatgruppen werden ebenfalls angeboten.</p>
+<p>In einer Vorlage mit Platzhaltern behalten Titel, Untertitel, Autorzeile, Vorspann, Bildunterschriften und Bio immer das Format ihres Platzhalters; der Fließtext bekommt das Format von <code>[TEXT]</code>.</p>
+<p class="note">Hat die Schrift eines Absatzes keinen fetten oder kursiven Schnitt, wird der Text trotzdem so ausgezeichnet. InDesign zeigt ihn dann als fehlende Schrift, damit die Hervorhebung nicht verloren geht. Die Meldung nennt die Schrift: Installieren Sie sie oder wählen Sie unter <b>Formate…</b> ein Zeichenformat für fett und kursiv.</p>
+
+<h2>8. Meldungen</h2>
+<p>Vor dem Import listet der Dialog unter <b>Bitte prüfen</b> Probleme in der Word-Datei und im Bilderordner:</p>
+<ul>
+  <li>kein Titel; eine Marke kommt doppelt vor; <code>[BIO:</code> ohne schließende <code>]</code></li>
+  <li>eine Marke wurde nicht erkannt und bleibt im Text, z. B. <code>[HEADER Warnungen}</code> mit falscher Klammer</li>
+  <li>übersprungene oder doppelte Bildnummern, eine Bildmarke ohne Bilddatei, eine Bilddatei ohne Bildmarke (sie wird ohne Bildunterschrift platziert) oder ein Bild, für das die Vorlage keinen Rahmen hat</li>
+  <li>Formatnamen, die es im Dokument nicht gibt</li>
+</ul>
+<p>Nach dem Import kommen Übersatz und fehlende Schriftschnitte dazu.</p>
+
+<h2>9. Ausprobieren</h2>
+<ol>
+  <li>Ein neues Dokument anlegen und einen großen Textrahmen aufziehen. Den Rahmen ausgewählt lassen.</li>
+  <li>Das Skript starten und <code>Beispiel/Beispielartikel.docx</code> wählen.</li>
+  <li>Im Dialog auf <b>Importieren</b> klicken. Der ganze Artikel steht jetzt im Rahmen.</li>
+</ol>
+<p>Mit einer eigenen Vorlage mit Platzhaltern werden zusätzlich die vier Beispielbilder im Ordner <code>Beispiel</code> platziert.</p>
+
+<h2>10. Hinweise</h2>
+<ul>
+  <li>Getestet mit InDesign 2027 unter Windows. Geschrieben für InDesign CS6 und neuer unter Windows und Mac; andere Versionen sind nicht getestet.</li>
+  <li>Die Dialoge erscheinen auf Deutsch, wenn InDesign auf Deutsch läuft, sonst auf Englisch.</li>
+  <li>Das Skript liest die Word-Datei mit dem Word-Import von InDesign. Es verändert die Word-Datei und die Bilder nicht und sendet keine Daten ins Internet.</li>
+  <li>Der Import ist ein einziger Rückgängig-Schritt. Speichern Sie das Dokument trotzdem vor dem Import.</li>
+</ul>
+
+</body>
+</html>

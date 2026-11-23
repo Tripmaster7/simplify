@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Article Import for InDesign – Guide</title>
+<style>
+  body { font: 15px/1.5 "Segoe UI", Helvetica, Arial, sans-serif; color: #222; max-width: 820px; margin: 2em auto; padding: 0 1.2em; }
+  h1 { font-size: 1.9em; margin-bottom: .1em; }
+  h2 { font-size: 1.3em; margin-top: 1.8em; border-bottom: 2px solid #ddd; padding-bottom: .2em; }
+  .meta { color: #666; margin-top: 0; }
+  code, kbd { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #f3f3f3; padding: 0 .25em; border-radius: 3px; }
+  table { border-collapse: collapse; width: 100%; margin: .6em 0; }
+  th, td { border: 1px solid #ccc; padding: .35em .5em; text-align: left; vertical-align: top; }
+  th { background: #f3f3f3; }
+  .note { background: #fff8e0; border-left: 4px solid #e0b000; padding: .5em .8em; }
+  pre { background: #f6f6f6; padding: .7em .9em; border-radius: 4px; overflow-x: auto; font-size: .9em; }
+  ol li, ul li { margin: .2em 0; }
+  @media print { body { margin: 0; max-width: none; font-size: 11pt; } h2 { break-after: avoid; } table, pre { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<h1>Article Import for InDesign</h1>
+<p class="meta">Version 1.0.0 · Script <code>ArtikelImport.jsx</code> · for Adobe InDesign</p>
+
+<p>The script sets an article from a Word file (<code>.docx</code>) into the open InDesign document. The Word file contains short markers in square brackets, for example <code>[TITLE: …]</code> for the title or <code>[Bild 1: …]</code> for a picture caption. The script reads these markers and puts each part in the right place.</p>
+<ul>
+  <li><b>Template with placeholders:</b> the article goes into the frames marked <code>[TITEL]</code>, <code>[TEXT]</code>, <code>[BILD 1]</code> and so on. The pictures are placed as well.</li>
+  <li><b>Any other document:</b> select a text frame (or click into a text), and the whole article is set there with the document's own paragraph styles.</li>
+</ul>
+<p>The marker and placeholder names are German (<i>Titel</i> = title, <i>Bild</i> = picture, <i>Bildunterschrift</i> = caption, <i>Vorspann</i> = intro, <i>Reisezeit</i> = travel period, <i>Autor</i> = author). Use them exactly as shown.</p>
+
+<h2>Contents of the Package</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>ArtikelImport.jsx</code></td><td>The script</td></tr>
+  <tr><td><code>Guide.html</code> / <code>Guide.pdf</code></td><td>This guide</td></tr>
+  <tr><td><code>Anleitung.html</code> / <code>Anleitung.pdf</code></td><td>The same guide in German</td></tr>
+  <tr><td><code>Beispiel/</code></td><td>An example article with four example pictures to try it out</td></tr>
+</table>
+
+<h2>1. Installation</h2>
+<ol>
+  <li>In InDesign, open <b>Window &gt; Utilities &gt; Scripts</b>.</li>
+  <li>Right-click <b>User</b> and choose <b>Reveal in Explorer</b> (Windows) or <b>Reveal in Finder</b> (Mac).</li>
+  <li>Copy <code>ArtikelImport.jsx</code> into the <b>Scripts Panel</b> folder that opens.</li>
+  <li>The script now appears under <b>User</b> in the Scripts panel.</li>
+</ol>
+<p>To update, replace the file with the new one.</p>
+
+<h2>2. Importing an Article</h2>
+<ol>
+  <li>Open the template, or the document the article should go into.<br>
+      Without placeholders: select the text frame for the article, or click into a text where it should start.</li>
+  <li>Double-click <b>ArtikelImport.jsx</b> in the Scripts panel.</li>
+  <li>Choose the Word file (<code>.docx</code>).</li>
+  <li>Check the dialog:
+    <ul>
+      <li><b>Author</b> and <b>Travel period</b> come from the Word file and can be changed here.</li>
+      <li><b>Pictures</b> shows which picture file was found for each placeholder. <b>Folder...</b> chooses another picture folder.</li>
+      <li><b>Please check</b> lists problems, such as a missing picture or a marker that was not recognized.</li>
+      <li><b>Styles...</b> chooses the paragraph and character styles (see <a href="#styles">section 7</a>).</li>
+    </ul>
+  </li>
+  <li>Click <b>Import</b>. Enter does not start the import; only the button does.</li>
+</ol>
+<p>A message then lists what was done and what needs checking, for example overset text. <b>Edit &gt; Undo</b> reverts the whole import in one step.</p>
+
+<h2>3. The Word File</h2>
+<p>Each marker stands in its own paragraph (picture markers may also stand inside a sentence). Upper and lower case do not matter.</p>
+<table>
+  <tr><th>Marker in Word</th><th>Result in InDesign</th></tr>
+  <tr><td><code>[TITLE: Headline]</code></td><td>Title → <code>[TITEL]</code>. Without this marker, a paragraph in Word's <i>Title</i> or <i>Heading 1</i> style becomes the title, otherwise the first paragraph (which then is not repeated in the body text).</td></tr>
+  <tr><td><code>[SUBTITLE: Sub-headline]</code></td><td>Subtitle → <code>[UNTERTITEL]</code></td></tr>
+  <tr><td><code>[AUTHOR_NAME: First Last]</code></td><td>Author name → <code>[AUTOR]</code>; can be changed in the dialog</td></tr>
+  <tr><td><code>[REISEZEIT: May to August 2024]</code></td><td>Travel period → <code>[REISEZEIT]</code>; can be changed in the dialog</td></tr>
+  <tr><td><code>[HEADER Section headline]</code><br><code>[HEADER 3 …]</code>, <code>[HEADER 4 …]</code></td><td>Headings in the body text (three levels)</td></tr>
+  <tr><td><code>[Bild 1: Caption]</code><br><code>[Bild 2]</code>, <code>[Image 3: …]</code></td><td>The caption goes into <code>[BILDUNTERSCHRIFT 1]</code>, the picture file <i>Bild 1</i> into <code>[BILD 1]</code>. The marker itself is removed from the text.</td></tr>
+  <tr><td><code>[BIO: Short text about the author]</code></td><td>Author bio → <code>[BIO]</code>. It may span several paragraphs; end it with <code>]</code>.</td></tr>
+  <tr><td><code>[AUTHOR_MEMBERSHIP: …]</code>, <code>[WRITING_DATE: …]</code>, <code>[RESTRICT]</code></td><td>Only used on the website; removed in print.</td></tr>
+</table>
+<ul>
+  <li>The <b>first paragraph</b> of the article becomes the <b>Vorspann</b> (intro).</li>
+  <li><b>Bold</b>, <i>italic</i>, links and bulleted or numbered lists (also nested) are kept. Links become InDesign hyperlinks, so they work in an interactive PDF.</li>
+  <li>Underline, colours, fonts, tables and pictures inside the Word file are not taken over.</li>
+  <li>Always save as <code>.docx</code>, not <code>.doc</code>.</li>
+</ul>
+<p>A template to copy:</p>
+<pre>[TITLE: ]
+[SUBTITLE: ]
+[AUTHOR_NAME: ]
+[REISEZEIT: ]
+
+First paragraph (becomes the Vorspann) ...
+
+Second paragraph with a picture marker [Bild 1: Caption].
+
+[HEADER Section headline]
+Another paragraph.
+
+[Bild 2: Caption]
+
+[BIO: ]</pre>
+
+<h2>4. Pictures</h2>
+<p>The script looks for picture files in the folder of the Word file, and in its subfolders <code>Links</code>, <code>Bilder</code>, <code>Images</code> and <code>Fotos</code>. The file name decides where a picture goes. Upper and lower case, spaces, <code>_</code> and <code>-</code> do not matter.</p>
+<table>
+  <tr><th>Placeholder</th><th>File names, e.g.</th></tr>
+  <tr><td><code>[AUFMACHERBILD]</code> (headline picture)</td><td><code>Aufmacherbild.jpg</code>, <code>Titelbild.jpg</code></td></tr>
+  <tr><td><code>[BILD n]</code></td><td><code>Bild 1.jpg</code>, <code>Bild_1.jpg</code>, <code>Bild-01.tif</code>, <code>Image 1.png</code></td></tr>
+  <tr><td><code>[AUTORENBILD]</code> (author picture)</td><td><code>Autorenbild.jpg</code>, <code>BioPic.jpg</code></td></tr>
+</table>
+<p>JPEG, PNG, TIFF, PSD, PDF, EPS and AI files are placed, linked to the original file. Do not move the pictures after the import, or relink them in the Links panel.</p>
+
+<h2>5. Template with Placeholders</h2>
+<p>A template gets text frames with these placeholders. Design, styles, master pages and so on are entirely up to you.</p>
+<table>
+  <tr><th>Placeholder</th><th>Where</th><th>Replaced with</th></tr>
+  <tr><td><code>[TITEL]</code></td><td>Title frame</td><td>Article title</td></tr>
+  <tr><td><code>[UNTERTITEL]</code></td><td>Subtitle frame</td><td>Subtitle</td></tr>
+  <tr><td><code>[AUTOR]</code></td><td>Anywhere in a line, e.g. <code>Text und Fotos: [AUTOR]</code></td><td>Author name from the dialog</td></tr>
+  <tr><td><code>[REISEZEIT]</code></td><td>Anywhere in a line, e.g. <code>Reisezeit: [REISEZEIT]</code></td><td>Travel period from the dialog</td></tr>
+  <tr><td><code>[VORSPANN]</code></td><td>Own paragraph in the intro frame</td><td>First paragraph of the article</td></tr>
+  <tr><td><code>[TEXT]</code></td><td>Every body text frame</td><td>The body text. All <code>[TEXT]</code> frames are threaded into one story in reading order: spread by spread, left to right, top to bottom. Other text in these frames is replaced.</td></tr>
+  <tr><td><code>[BIO]</code></td><td>Own paragraph in the author box</td><td>Author bio; the rest of the box stays</td></tr>
+  <tr><td><code>[BILDUNTERSCHRIFT n]</code></td><td>Caption frame</td><td>Caption from <code>[Bild n: …]</code></td></tr>
+  <tr><td><code>[BILD n]</code>, <code>[AUFMACHERBILD]</code>, <code>[AUTORENBILD]</code></td><td>Small text frame <b>on top of</b> an empty graphic frame</td><td>The picture goes into the graphic frame below; the small text frame is deleted. Without <i>Frame Fitting Options</i>, the picture fills the frame proportionally, centred.</td></tr>
+</table>
+<ul>
+  <li>A line whose placeholder gets no value is removed, for example <code>Reisezeit: [REISEZEIT]</code> without a travel period.</li>
+  <li>Picture frames without a picture stay empty; text that does not fit stays overset. Adjust the page count and breaks by hand afterwards.</li>
+  <li>Placeholders keep their paragraph style and local formatting. Headings, lists and captions in the body text use the styles chosen under <b>Styles...</b>.</li>
+  <li>A template can be saved as <code>.indt</code>; InDesign then opens an untitled copy each time.</li>
+</ul>
+
+<h2>6. Document without Placeholders</h2>
+<p>If the document has no <code>[TEXT]</code> placeholder, the script needs a target: a selected text frame (the article is added at the end of its story), a text cursor, or selected text (which is replaced). The whole article is set there in this order: title, subtitle, author, Vorspann, body text with the picture markers and captions, author name and bio.</p>
+<p>Pictures are not placed in this case, because the script cannot know where they go. The lines <code>[Bild 1]</code> and so on show where they belong.</p>
+
+<h2 id="styles">7. Styles</h2>
+<p><b>Styles...</b> in the dialog chooses a style of the open document for each part of the article. The choice is saved in the document: a template saved after the choice keeps it. The last choice is also suggested for other documents.</p>
+<table>
+  <tr><th>Article part</th><th>Default style</th><th>Without that style</th></tr>
+  <tr><td>Title</td><td>Artikeltitel</td><td>Body text</td></tr>
+  <tr><td>Subtitle, author line</td><td>Untertitel</td><td>Body text</td></tr>
+  <tr><td>Vorspann</td><td>Vorspann</td><td>Body text</td></tr>
+  <tr><td>Body text</td><td>Fliesstext</td><td>The style of the <code>[TEXT]</code> placeholder or of the text at the cursor</td></tr>
+  <tr><td>First body paragraph, and the first after each heading</td><td><i>(none)</i></td><td>Body text</td></tr>
+  <tr><td><code>[HEADER]</code> / <code>[HEADER 3]</code> / <code>[HEADER 4]</code></td><td>Zwischenueberschrift</td><td>Body text / level 2 / level 3</td></tr>
+  <tr><td>Bulleted and numbered lists, level 1 and 2</td><td><i>(none)</i></td><td>Body text, with the bullet or number as text</td></tr>
+  <tr><td>Picture marker <code>[Bild n]</code> (only without placeholders)</td><td><i>(none)</i></td><td>Body text</td></tr>
+  <tr><td>Caption</td><td>Bildunterschrift</td><td>Body text</td></tr>
+  <tr><td>Author box: name, text</td><td>Zwischenueberschrift, Vorspann</td><td>Heading, body text</td></tr>
+  <tr><td>Bold, italic, bold italic, links (character styles)</td><td><i>[Font style of the paragraph]</i></td><td>The matching style of the paragraph's font, e.g. <i>Bold Italic</i> in an italic paragraph</td></tr>
+</table>
+<p>Your styles do not need these names; simply choose your own styles under <b>Styles...</b>. Styles inside style groups are offered too.</p>
+<p>In a template with placeholders, title, subtitle, author line, Vorspann, captions and bio always keep the style of their placeholder; the body text takes the style of <code>[TEXT]</code>.</p>
+<p class="note">When a paragraph's font has no bold or italic style, the text is still marked with it. InDesign then shows it as a missing font, so the emphasis is not lost. The message names the font: install it, or choose a character style for bold and italic under <b>Styles...</b>.</p>
+
+<h2>8. Messages</h2>
+<p>Before the import, <b>Please check</b> in the dialog lists problems in the Word file and the picture folder:</p>
+<ul>
+  <li>no title; a marker that appears twice; <code>[BIO:</code> without a closing <code>]</code></li>
+  <li>a marker that was not recognized and stays in the text, e.g. <code>[HEADER Warnungen}</code> with the wrong bracket</li>
+  <li>skipped or repeated picture numbers, a picture marker without a picture file, a picture file without a marker (it is placed without a caption), or a picture the template has no frame for</li>
+  <li>style names that the document does not have</li>
+</ul>
+<p>After the import, the message adds overset text and missing font styles.</p>
+
+<h2>9. Trying It Out</h2>
+<ol>
+  <li>Create a new document and draw a large text frame. Leave the frame selected.</li>
+  <li>Run the script and choose <code>Beispiel/Beispielartikel.docx</code>.</li>
+  <li>Click <b>Import</b> in the dialog. The whole article is now in the frame.</li>
+</ol>
+<p>With your own template with placeholders, the four example pictures in the <code>Beispiel</code> folder are placed as well.</p>
+
+<h2>10. Notes</h2>
+<ul>
+  <li>Tested with InDesign 2027 on Windows. Written for InDesign CS6 and newer on Windows and Mac; other versions are untested.</li>
+  <li>The dialogs are in German when InDesign runs in German, otherwise in English.</li>
+  <li>The script reads the Word file with InDesign's own Word import. It does not change the Word file or the pictures and sends no data to the internet.</li>
+  <li>The import is a single undo step. Still, save the document before importing.</li>
+</ul>
+
+</body>
+</html>

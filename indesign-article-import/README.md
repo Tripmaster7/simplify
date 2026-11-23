@@ -150,3 +150,7 @@ $indesign.DoScript('C:\path\to\runner.jsx', 1246973031)   # 1246973031 = JavaScr
 ```
 
 `Testartikel.docx` uses every rule of the format: markers, headings, bold and italic, a link, a nested list, picture markers, an unrecognized marker, a bio over two paragraphs and an emoji, which checks the character counting.
+
+### Package for Others
+
+`python indesign-article-import/package/build-package.py` writes `ArtikelImport-InDesign-v<version>.zip` to the repository root. It is a standalone package for people without access to this repository: the script, a German and an English guide (`package/Anleitung.html`, `package/Guide.html`, also as PDF) and an example article with pictures. It needs Pillow, and Edge or Chrome for the PDFs.

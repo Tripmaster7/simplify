@@ -3,6 +3,8 @@ Writes tests/fixtures/Testartikel.docx: a small article that uses every rule of 
 (markers, headings, bold/italic, a link, lists, picture markers, a multi-paragraph bio, an emoji).
 
 Run: python indesign-article-import/tests/make-test-docx.py
+
+write_docx() is also used by ../package/build-package.py for the example article.
 """
 
 import os
@@ -37,7 +39,7 @@ def para(*runs, style=None, num=None):
     return '<w:p>' + props + body + '</w:p>'
 
 
-paragraphs = [
+TEST_PARAGRAPHS = [
     para('[TITLE: Testartikel für den Import]'),
     para('[SUBTITLE: Alle Regeln auf einmal]'),
     para('[AUTHOR_NAME: Anna Autorin]'),
@@ -61,12 +63,6 @@ paragraphs = [
     para('Zweiter Absatz der Bio.]'),
 ]
 
-document = (
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    '<w:document xmlns:w="' + W + '" xmlns:r="' + R + '"><w:body>'
-    + ''.join(paragraphs)
-    + '<w:sectPr/></w:body></w:document>'
-)
 
 styles = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -106,22 +102,38 @@ package_rels = (
     '</Relationships>'
 )
 
-document_rels = (
+DOCUMENT_RELS = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
     '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
     '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>'
-    '<Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/" TargetMode="External"/>'
+    '{links}'
     '</Relationships>'
 )
 
-os.makedirs(os.path.dirname(TARGET), exist_ok=True)
-with zipfile.ZipFile(TARGET, 'w', zipfile.ZIP_DEFLATED) as docx:
-    docx.writestr('[Content_Types].xml', content_types)
-    docx.writestr('_rels/.rels', package_rels)
-    docx.writestr('word/document.xml', document)
-    docx.writestr('word/_rels/document.xml.rels', document_rels)
-    docx.writestr('word/styles.xml', styles)
-    docx.writestr('word/numbering.xml', numbering)
+def write_docx(target, paragraphs, links):
+    """Writes a .docx; links maps relationship ids used with link() to their URLs."""
+    document = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="' + W + '" xmlns:r="' + R + '"><w:body>'
+        + ''.join(paragraphs)
+        + '<w:sectPr/></w:body></w:document>'
+    )
+    link_rels = ''.join(
+        '<Relationship Id="' + rel_id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+        ' Target="' + escape(url, {'"': '&quot;'}) + '" TargetMode="External"/>'
+        for rel_id, url in links.items()
+    )
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as docx:
+        docx.writestr('[Content_Types].xml', content_types)
+        docx.writestr('_rels/.rels', package_rels)
+        docx.writestr('word/document.xml', document)
+        docx.writestr('word/_rels/document.xml.rels', DOCUMENT_RELS.replace('{links}', link_rels))
+        docx.writestr('word/styles.xml', styles)
+        docx.writestr('word/numbering.xml', numbering)
 
-print('Wrote ' + TARGET)
+
+if __name__ == '__main__':
+    write_docx(TARGET, TEST_PARAGRAPHS, {'rIdLink': 'https://example.com/'})
+    print('Wrote ' + TARGET)
